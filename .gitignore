@@ -1,0 +1,28 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.env
+!.env.example
+
+# Expo
+.expo/
+apps/mobile/.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# macOS
+.DS_Store
+
+# Logs
+npm-debug.log*
+*.log
+
+# Docker volumes are managed by Docker itself, nothing to ignore here
+
+# Local storage (uploaded images in dev)
+apps/backend/storage/

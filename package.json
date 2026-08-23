@@ -1,0 +1,20 @@
+{
+  "name": "hair-analysis-app",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=@hair-analysis/backend",
+    "dev:mobile": "npm run start --workspace=@hair-analysis/mobile",
+    "build:shared": "npm run build --workspace=@hair-analysis/shared",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:generate": "npm run db:generate --workspace=@hair-analysis/backend",
+    "db:migrate": "npm run db:migrate --workspace=@hair-analysis/backend"
+  }
+}
