@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787571667717,
+      "tag": "0000_concerned_patch",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787593092625,
+      "tag": "0001_round_thunderball",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787595710865,
+      "tag": "0002_overrated_taskmaster",
+      "breakpoints": true
+    }
+  ]
+}

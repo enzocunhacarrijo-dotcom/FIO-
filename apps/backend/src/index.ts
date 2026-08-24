@@ -1,12 +1,27 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { healthCheckResponseSchema } from "@hair-analysis/shared";
+import jwt from "@fastify/jwt";
+import multipart from "@fastify/multipart";
+import { healthCheckResponseSchema, photoUploadLimits } from "@hair-analysis/shared";
 import { env } from "./config/env.js";
 import { queryClient } from "./db/client.js";
+import { analysisRoutes } from "./routes/analysis.js";
+import { authRoutes } from "./routes/auth.js";
+import { photosRoutes } from "./routes/photos.js";
+import { questionnaireRoutes } from "./routes/questionnaire.js";
 
 const app = Fastify({ logger: true });
 
 await app.register(cors, { origin: true });
+await app.register(jwt, { secret: env.JWT_ACCESS_SECRET });
+await app.register(multipart, {
+  attachFieldsToBody: true,
+  limits: { fileSize: photoUploadLimits.maxFileSizeBytes },
+});
+await app.register(authRoutes);
+await app.register(questionnaireRoutes);
+await app.register(photosRoutes);
+await app.register(analysisRoutes);
 
 app.get("/health", async (_request, reply) => {
   try {

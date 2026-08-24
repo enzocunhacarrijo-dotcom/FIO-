@@ -12,7 +12,7 @@ const envSchema = z.object({
   STORAGE_URL_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   AI_MODEL: z.string().default("claude-sonnet-5"),
   ANTHROPIC_API_KEY: z.string().optional(),
-  RATE_LIMIT_FREE_ANALYSES_PER_DAY: z.coerce.number().int().positive().default(5),
+  RATE_LIMIT_FREE_ANALYSES_PER_DAY: z.coerce.number().int().positive().default(3),
 });
 
 const parsed = envSchema.safeParse(process.env);

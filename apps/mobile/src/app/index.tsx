@@ -1,120 +1,83 @@
-import { healthCheckResponseSchema, type HealthCheckResponse } from '@hair-analysis/shared';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useAuthStore } from '@/store/auth';
+import { hasCompletedQuestionnaire } from '@/api/questionnaire';
+import { getLatestPhotos } from '@/api/photos';
+import { getLatestAnalysis } from '@/api/analysis';
+import { CAPTURE_STEPS } from '@/data/capture-steps';
+import { colors } from '@/theme/tokens';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+type Destination =
+  | '/welcome'
+  | '/onboarding/objetivo'
+  | '/onboarding/questionario'
+  | '/captura'
+  | '/analise'
+  | '/analise/resultado';
 
-type CheckState =
-  | { status: 'loading' }
-  | { status: 'success'; data: HealthCheckResponse }
-  | { status: 'error'; message: string };
+export default function Index() {
+  const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const hydrate = useAuthStore((s) => s.hydrate);
+  const [destination, setDestination] = useState<Destination | null>(null);
 
-function useBackendHealthCheck() {
-  const [state, setState] = useState<CheckState>({ status: 'loading' });
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
-  const run = useCallback(async () => {
-    setState({ status: 'loading' });
-    const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+  useEffect(() => {
+    if (status !== 'ready') return;
 
-    if (!apiUrl) {
-      setState({
-        status: 'error',
-        message: 'EXPO_PUBLIC_API_URL não está definido. Configure apps/mobile/.env.',
-      });
+    if (!user) {
+      setDestination('/welcome');
+      return;
+    }
+    if (!user.objetivoPrincipal) {
+      setDestination('/onboarding/objetivo');
+      return;
+    }
+    if (!accessToken) {
+      setDestination('/welcome');
       return;
     }
 
-    try {
-      const response = await fetch(`${apiUrl}/health`);
-      const json = await response.json();
+    hasCompletedQuestionnaire(accessToken)
+      .then(async (done) => {
+        if (!done) {
+          setDestination('/onboarding/questionario');
+          return;
+        }
+        const photos = await getLatestPhotos(accessToken);
+        const kindsPresent = new Set(photos.map((p) => p.kind));
+        const allCaptured = CAPTURE_STEPS.every((step) => kindsPresent.has(step.kind));
+        if (!allCaptured) {
+          setDestination('/captura');
+          return;
+        }
+        const analysis = await getLatestAnalysis(accessToken);
+        setDestination(analysis ? '/analise/resultado' : '/analise');
+      })
+      .catch(() => setDestination('/onboarding/questionario'));
+  }, [status, user, accessToken]);
 
-      if (!response.ok) {
-        setState({ status: 'error', message: `Backend respondeu ${response.status}` });
-        return;
-      }
+  if (!destination) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.text} />
+      </View>
+    );
+  }
 
-      const data = healthCheckResponseSchema.parse(json);
-      setState({ status: 'success', data });
-    } catch (error) {
-      setState({
-        status: 'error',
-        message: error instanceof Error ? error.message : 'Falha desconhecida ao conectar.',
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    run();
-  }, [run]);
-
-  return { state, retry: run };
-}
-
-export default function HomeScreen() {
-  const { state, retry } = useBackendHealthCheck();
-
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.title}>
-          Fundação
-        </ThemedText>
-        <ThemedText type="small">Conexão app → backend → banco de dados</ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.statusCard}>
-          {state.status === 'loading' && (
-            <>
-              <ActivityIndicator />
-              <ThemedText type="small">Verificando backend…</ThemedText>
-            </>
-          )}
-          {state.status === 'success' && (
-            <>
-              <ThemedText type="smallBold">✓ Backend e banco de dados respondendo</ThemedText>
-              <ThemedText type="code">{JSON.stringify(state.data, null, 2)}</ThemedText>
-            </>
-          )}
-          {state.status === 'error' && (
-            <>
-              <ThemedText type="smallBold">Não foi possível conectar ao backend</ThemedText>
-              <ThemedText type="small">{state.message}</ThemedText>
-              <ThemedText type="link" onPress={retry}>
-                Tentar novamente
-              </ThemedText>
-            </>
-          )}
-        </ThemedView>
-      </SafeAreaView>
-    </ThemedView>
-  );
+  return <Redirect href={destination} />;
 }
 
 const styles = StyleSheet.create({
-  container: {
+  center: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  statusCard: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg,
   },
 });
