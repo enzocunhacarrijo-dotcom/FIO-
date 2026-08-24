@@ -10,6 +10,7 @@ import { authRoutes } from "./routes/auth.js";
 import { photosRoutes } from "./routes/photos.js";
 import { questionnaireRoutes } from "./routes/questionnaire.js";
 import { routineRoutes } from "./routes/routine.js";
+import { scannerRoutes } from "./routes/scanner.js";
 
 const app = Fastify({ logger: true });
 
@@ -24,6 +25,7 @@ await app.register(questionnaireRoutes);
 await app.register(photosRoutes);
 await app.register(analysisRoutes);
 await app.register(routineRoutes);
+await app.register(scannerRoutes);
 
 app.get("/health", async (_request, reply) => {
   try {

@@ -128,3 +128,20 @@ export const routineCheckins = pgTable(
     index("routine_checkins_user_id_idx").on(table.userId),
   ],
 );
+
+export const productScans = pgTable(
+  "product_scans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    result: jsonb("result").notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull(),
+    outputTokens: integer("output_tokens").notNull(),
+    costUsd: doublePrecision("cost_usd").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("product_scans_user_id_idx").on(table.userId)],
+);

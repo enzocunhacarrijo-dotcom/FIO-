@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import type { AnalysisResult } from '@hair-analysis/shared';
 import { AttributeCard } from '@/components/attribute-card';
+import { Button } from '@/components/button';
 import { FiberIndex } from '@/components/fiber-index';
 import { RotinaChecklist } from '@/components/rotina-checklist';
 import { ScreenHeader } from '@/components/screen-header';
@@ -207,6 +208,8 @@ export default function ResultadoScreen() {
             </View>
           </>
         )}
+
+        <Button label="Ler um produto que você tem em mãos" variant="secondary" onPress={() => router.push('/scanner')} />
 
         <Text style={styles.disclaimer}>
           Esta é uma avaliação cosmética, não um diagnóstico médico. Para queda intensa, lesão ou dor no couro

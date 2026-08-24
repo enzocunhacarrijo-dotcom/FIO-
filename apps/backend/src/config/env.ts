@@ -13,6 +13,7 @@ const envSchema = z.object({
   AI_MODEL: z.string().default("claude-sonnet-5"),
   ANTHROPIC_API_KEY: z.string().optional(),
   RATE_LIMIT_FREE_ANALYSES_PER_DAY: z.coerce.number().int().positive().default(3),
+  RATE_LIMIT_FREE_SCANS_PER_DAY: z.coerce.number().int().positive().default(5),
 });
 
 const parsed = envSchema.safeParse(process.env);
