@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -105,5 +106,25 @@ export const analyses = pgTable(
   (table) => [
     index("analyses_user_id_idx").on(table.userId),
     index("analyses_user_photo_hash_idx").on(table.userId, table.photoSetHash),
+  ],
+);
+
+export const routineCheckins = pgTable(
+  "routine_checkins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Local calendar date as YYYY-MM-DD (not a timestamp) — a streak is
+    // defined in the user's day-to-day sense, not by exact time of check-in.
+    date: text("date").notNull(),
+    completedActions: jsonb("completed_actions").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("routine_checkins_user_date_unique").on(table.userId, table.date),
+    index("routine_checkins_user_id_idx").on(table.userId),
   ],
 );

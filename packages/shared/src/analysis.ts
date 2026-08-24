@@ -55,7 +55,10 @@ export const subScoresSchema = z.object({
 
 const ingredienteSchema = z.object({ nome: z.string(), porQue: z.string() });
 
-export const rotinaDiaSchema = z.object({ dia: z.string(), acoes: z.array(z.string()) });
+export const diaDaSemanaSchema = z.enum(["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]);
+export type DiaDaSemana = z.infer<typeof diaDaSemanaSchema>;
+
+export const rotinaDiaSchema = z.object({ dia: diaDaSemanaSchema, acoes: z.array(z.string()) });
 
 export const qualidadeDasImagensSchema = z.object({
   suficiente: z.boolean(),

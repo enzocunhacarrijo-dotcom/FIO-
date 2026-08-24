@@ -12,3 +12,4 @@ export * from "./analysis.js";
 export * from "./auth.js";
 export * from "./photos.js";
 export * from "./questionnaire.js";
+export * from "./routine.js";

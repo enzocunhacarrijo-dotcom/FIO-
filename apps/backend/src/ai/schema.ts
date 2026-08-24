@@ -53,7 +53,12 @@ export const analysisAiOutputSchemaV4 = z.object({
   necessidadesPrioritarias: z.array(z.string()),
   ingredientesRecomendados: z.array(z.object({ nome: z.string(), porQue: z.string() })),
   ingredientesAEvitar: z.array(z.object({ nome: z.string(), porQue: z.string() })),
-  rotinaSemanal: z.array(z.object({ dia: z.string(), acoes: z.array(z.string()) })),
+  rotinaSemanal: z.array(
+    z.object({
+      dia: z.enum(["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]),
+      acoes: z.array(z.string()),
+    }),
+  ),
   observacoesAoUsuario: z.string(),
   sinalDeAlertaMedico: z.boolean(),
   motivoAlerta: z.string().nullable(),

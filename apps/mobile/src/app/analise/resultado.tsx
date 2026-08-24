@@ -5,11 +5,13 @@ import { router } from 'expo-router';
 import type { AnalysisResult } from '@hair-analysis/shared';
 import { AttributeCard } from '@/components/attribute-card';
 import { FiberIndex } from '@/components/fiber-index';
+import { RotinaChecklist } from '@/components/rotina-checklist';
 import { ScreenHeader } from '@/components/screen-header';
 import { getLatestAnalysis } from '@/api/analysis';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/store/auth';
 import { label } from '@/data/analysis-labels';
+import { todayWeekday, WEEKDAY_LABEL } from '@/lib/date';
 import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
 
 export default function ResultadoScreen() {
@@ -139,24 +141,32 @@ export default function ResultadoScreen() {
           </View>
         )}
 
-        <Text style={styles.sectionLabel}>Prioridades</Text>
-        <View style={styles.plainCard}>
-          {result.necessidadesPrioritarias.map((item, i) => (
-            <Text key={i} style={styles.listItem}>
-              • {item}
-            </Text>
-          ))}
-        </View>
-
-        <Text style={styles.sectionLabel}>Ingredientes recomendados</Text>
-        <View style={styles.cardStack}>
-          {result.ingredientesRecomendados.map((ing, i) => (
-            <View key={i} style={styles.plainCard}>
-              <Text style={styles.plainCardTitle}>{ing.nome}</Text>
-              <Text style={styles.plainCardBody}>{ing.porQue}</Text>
+        {result.necessidadesPrioritarias.length > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>Prioridades</Text>
+            <View style={styles.plainCard}>
+              {result.necessidadesPrioritarias.map((item, i) => (
+                <Text key={i} style={styles.listItem}>
+                  • {item}
+                </Text>
+              ))}
             </View>
-          ))}
-        </View>
+          </>
+        )}
+
+        {result.ingredientesRecomendados.length > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>Ingredientes recomendados</Text>
+            <View style={styles.cardStack}>
+              {result.ingredientesRecomendados.map((ing, i) => (
+                <View key={i} style={styles.plainCard}>
+                  <Text style={styles.plainCardTitle}>{ing.nome}</Text>
+                  <Text style={styles.plainCardBody}>{ing.porQue}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         {result.ingredientesAEvitar.length > 0 && (
           <>
@@ -172,19 +182,31 @@ export default function ResultadoScreen() {
           </>
         )}
 
-        <Text style={styles.sectionLabel}>Rotina semanal</Text>
-        <View style={styles.cardStack}>
-          {result.rotinaSemanal.map((dia, i) => (
-            <View key={i} style={styles.plainCard}>
-              <Text style={styles.plainCardTitle}>{dia.dia}</Text>
-              {dia.acoes.map((acao, j) => (
-                <Text key={j} style={styles.listItem}>
-                  • {acao}
-                </Text>
-              ))}
+        <Text style={styles.sectionLabel}>Rotina</Text>
+        {result.rotinaSemanal.length === 0 ? (
+          <Text style={styles.empty}>
+            Não foi possível montar uma rotina com o que recebemos — envie fotos mais nítidas para uma recomendação
+            completa.
+          </Text>
+        ) : (
+          <>
+            {accessToken && <RotinaChecklist accessToken={accessToken} rotinaSemanal={result.rotinaSemanal} />}
+            <View style={styles.cardStack}>
+              {result.rotinaSemanal
+                .filter((dia) => dia.dia !== todayWeekday())
+                .map((dia, i) => (
+                  <View key={i} style={styles.plainCard}>
+                    <Text style={styles.plainCardTitle}>{WEEKDAY_LABEL[dia.dia]}</Text>
+                    {dia.acoes.map((acao, j) => (
+                      <Text key={j} style={styles.listItem}>
+                        • {acao}
+                      </Text>
+                    ))}
+                  </View>
+                ))}
             </View>
-          ))}
-        </View>
+          </>
+        )}
 
         <Text style={styles.disclaimer}>
           Esta é uma avaliação cosmética, não um diagnóstico médico. Para queda intensa, lesão ou dor no couro
@@ -293,6 +315,17 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 21,
     color: colors.textMuted,
+  },
+  empty: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textMuted,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
   },
   disclaimer: {
     fontFamily: fontFamily.body,
