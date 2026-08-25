@@ -6,14 +6,29 @@ import {
   guestRequestSchema,
   refreshRequestSchema,
   setObjetivoRequestSchema,
+  setPremiumRequestSchema,
+  analysisResultSchema,
+  photoRecordSchema,
+  scanResultSchema,
+  userDataExportSchema,
   type AuthResponse,
   type CurrentUser,
+  type QuestionnaireResponse,
 } from "@hair-analysis/shared";
 import { db } from "../db/client.js";
-import { refreshTokens, users } from "../db/schema.js";
+import {
+  analyses,
+  habitCheckins,
+  photos,
+  productScans,
+  questionnaireResponses,
+  refreshTokens,
+  users,
+} from "../db/schema.js";
 import { hashPassword, verifyPassword } from "../auth/password.js";
 import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../auth/tokens.js";
 import { requireAuth } from "../middleware/auth.js";
+import { createSignedAccess, storage } from "../storage/index.js";
 
 type UserRow = typeof users.$inferSelect;
 
@@ -23,6 +38,7 @@ function toCurrentUser(row: UserRow): CurrentUser {
     kind: row.kind,
     email: row.email,
     objetivoPrincipal: row.objetivoPrincipal,
+    isPremium: row.isPremium,
   };
 }
 
@@ -49,7 +65,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const passwordHash = await hashPassword(password);
-    const [user] = await db.insert(users).values({ kind: "registered", email, passwordHash }).returning();
+    const [user] = await db
+      .insert(users)
+      .values({ kind: "registered", email, passwordHash, lgpdConsentAt: new Date() })
+      .returning();
     if (!user) {
       return reply.status(500).send({ error: "internal_error", message: "Não foi possível criar a conta. Tente de novo." });
     }
@@ -81,7 +100,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     let user = await db.query.users.findFirst({ where: eq(users.deviceId, deviceId) });
     if (!user) {
-      const [created] = await db.insert(users).values({ kind: "guest", deviceId }).returning();
+      const [created] = await db
+        .insert(users)
+        .values({ kind: "guest", deviceId, lgpdConsentAt: new Date() })
+        .returning();
       if (!created) {
         return reply.status(500).send({ error: "internal_error", message: "Não foi possível criar o acesso convidado." });
       }
@@ -138,5 +160,90 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(404).send({ error: "not_found", message: "Usuário não encontrado." });
     }
     return reply.send(toCurrentUser(updated));
+  });
+
+  // Stub upgrade/downgrade toggle — no real payment provider wired up yet.
+  // Flips the flag a checkout would normally set, so the rest of the app
+  // (rate limits, paywall gating) can be built and demoed against it now.
+  app.patch("/api/me/premium", { preHandler: requireAuth }, async (request, reply) => {
+    const parsed = setPremiumRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "invalid_request", message: "Valor de premium inválido." });
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set({ isPremium: parsed.data.isPremium, updatedAt: new Date() })
+      .where(eq(users.id, request.user.sub))
+      .returning();
+    if (!updated) {
+      return reply.status(404).send({ error: "not_found", message: "Usuário não encontrado." });
+    }
+    return reply.send(toCurrentUser(updated));
+  });
+
+  app.get("/api/me/export", { preHandler: requireAuth }, async (request, reply) => {
+    const userId = request.user.sub;
+    const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+    if (!user) {
+      return reply.status(404).send({ error: "not_found", message: "Usuário não encontrado." });
+    }
+
+    const [questionnaire, photoRows, analysisRows, scanRows, habitRows] = await Promise.all([
+      db.query.questionnaireResponses.findFirst({
+        where: eq(questionnaireResponses.userId, userId),
+        orderBy: (t, { desc }) => desc(t.createdAt),
+      }),
+      db.query.photos.findMany({ where: eq(photos.userId, userId) }),
+      db.query.analyses.findMany({ where: eq(analyses.userId, userId) }),
+      db.query.productScans.findMany({ where: eq(productScans.userId, userId) }),
+      db.query.habitCheckins.findMany({ where: eq(habitCheckins.userId, userId) }),
+    ]);
+
+    const payload = userDataExportSchema.parse({
+      exportadoEm: new Date().toISOString(),
+      perfil: toCurrentUser(user),
+      questionario: (questionnaire?.respostas as QuestionnaireResponse | undefined) ?? null,
+      fotos: photoRows.map((row) => {
+        const { token, expiresAt } = createSignedAccess(row.storageKey);
+        return photoRecordSchema.parse({
+          id: row.id,
+          kind: row.kind,
+          width: row.width,
+          height: row.height,
+          createdAt: row.createdAt.toISOString(),
+          url: `/api/photos/${row.id}/file?token=${token}&exp=${expiresAt}`,
+        });
+      }),
+      analises: analysisRows.map((row) =>
+        analysisResultSchema.parse({ ...(row.result as object), id: row.id, createdAt: row.createdAt.toISOString() }),
+      ),
+      leiturasDeProduto: scanRows.map((row) =>
+        scanResultSchema.parse({ ...(row.result as object), id: row.id, createdAt: row.createdAt.toISOString() }),
+      ),
+      registrosDeHabito: habitRows.map((row) => ({
+        date: row.date,
+        source: row.source,
+        sleepWell: row.sleepWell,
+        stressLevel: row.stressLevel,
+      })),
+    });
+
+    return reply.send(payload);
+  });
+
+  // Account deletion (LGPD "direito de exclusão"). All child tables reference
+  // users with onDelete: cascade, so the DB row delete cleans up everything
+  // except photo files, which live outside Postgres and are removed first.
+  app.delete("/api/me", { preHandler: requireAuth }, async (request, reply) => {
+    const userId = request.user.sub;
+    const photoRows = await db.query.photos.findMany({ where: eq(photos.userId, userId) });
+    await Promise.all(photoRows.map((row) => storage.delete(row.storageKey)));
+
+    const [deleted] = await db.delete(users).where(eq(users.id, userId)).returning();
+    if (!deleted) {
+      return reply.status(404).send({ error: "not_found", message: "Usuário não encontrado." });
+    }
+    return reply.status(204).send();
   });
 }

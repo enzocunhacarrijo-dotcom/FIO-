@@ -48,12 +48,16 @@ type AuthState = {
   refreshToken: string | null;
   error: string | null;
   busy: boolean;
+  lgpdConsented: boolean;
+  setLgpdConsented: (value: boolean) => void;
   hydrate: () => Promise<void>;
   registerAccount: (email: string, password: string) => Promise<boolean>;
   loginAccount: (email: string, password: string) => Promise<boolean>;
   continueAsGuest: () => Promise<boolean>;
   setObjetivo: (objetivo: ObjetivoPrincipal) => Promise<boolean>;
+  setPremium: (isPremium: boolean) => Promise<boolean>;
   refresh: () => Promise<boolean>;
+  logout: () => Promise<void>;
   clearError: () => void;
 };
 
@@ -64,6 +68,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   refreshToken: null,
   error: null,
   busy: false,
+  lgpdConsented: false,
+
+  setLgpdConsented: (value) => set({ lgpdConsented: value }),
 
   hydrate: async () => {
     try {
@@ -86,7 +93,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   registerAccount: async (email, password) => {
     set({ busy: true, error: null });
     try {
-      const auth = await authApi.register(email, password);
+      const auth = await authApi.register(email, password, get().lgpdConsented);
       await persistAuth(auth);
       set({ user: auth.user, accessToken: auth.accessToken, refreshToken: auth.refreshToken, busy: false });
       return true;
@@ -113,7 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ busy: true, error: null });
     try {
       const deviceId = await getOrCreateDeviceId();
-      const auth = await authApi.loginAsGuest(deviceId);
+      const auth = await authApi.loginAsGuest(deviceId, get().lgpdConsented);
       await persistAuth(auth);
       set({ user: auth.user, accessToken: auth.accessToken, refreshToken: auth.refreshToken, busy: false });
       return true;
@@ -138,6 +145,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ error: err instanceof ApiError ? err.message : 'Não foi possível salvar seu objetivo.', busy: false });
       return false;
     }
+  },
+
+  setPremium: async (isPremium) => {
+    const { accessToken } = get();
+    if (!accessToken) return false;
+    try {
+      const user = await authApi.setPremium(accessToken, isPremium);
+      set({ user });
+      return true;
+    } catch (err) {
+      set({ error: err instanceof ApiError ? err.message : 'Não foi possível atualizar seu plano.' });
+      return false;
+    }
+  },
+
+  logout: async () => {
+    await clearAuth();
+    set({ user: null, accessToken: null, refreshToken: null, lgpdConsented: false });
   },
 
   refresh: async () => {
@@ -167,7 +192,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }));
-
-export async function resetAuthStorage(): Promise<void> {
-  await clearAuth();
-}

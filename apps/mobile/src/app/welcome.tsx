@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
+import { Checkbox } from '@/components/checkbox';
 import { useAuthStore } from '@/store/auth';
 import { colors, fontFamily, spacing } from '@/theme/tokens';
 
@@ -10,6 +11,8 @@ export default function WelcomeScreen() {
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
   const busy = useAuthStore((s) => s.busy);
   const error = useAuthStore((s) => s.error);
+  const lgpdConsented = useAuthStore((s) => s.lgpdConsented);
+  const setLgpdConsented = useAuthStore((s) => s.setLgpdConsented);
   const [guestLoading, setGuestLoading] = useState(false);
 
   async function handleGuest() {
@@ -32,14 +35,26 @@ export default function WelcomeScreen() {
 
         <View style={styles.actions}>
           {error && <Text style={styles.error}>{error}</Text>}
-          <Button label="Criar conta" onPress={() => router.push('/register')} disabled={busy} />
-          <Button label="Já tenho conta" variant="secondary" onPress={() => router.push('/login')} disabled={busy} />
+
+          <Checkbox
+            checked={lgpdConsented}
+            onToggle={setLgpdConsented}
+            label="Li e aceito o uso das minhas fotos, respostas do questionário e dados de progresso para gerar minha análise. Posso exportar ou excluir tudo depois, em Minha conta › Privacidade."
+          />
+
+          <Button label="Criar conta" onPress={() => router.push('/register')} disabled={busy || !lgpdConsented} />
+          <Button
+            label="Já tenho conta"
+            variant="secondary"
+            onPress={() => router.push('/login')}
+            disabled={busy || !lgpdConsented}
+          />
           <Button
             label="Continuar sem conta"
             variant="secondary"
             onPress={handleGuest}
             loading={guestLoading}
-            disabled={busy && !guestLoading}
+            disabled={(busy && !guestLoading) || !lgpdConsented}
           />
           <Text style={styles.disclaimer}>
             Sem conta, seus dados ficam associados só a este dispositivo. Você pode criar uma conta depois.

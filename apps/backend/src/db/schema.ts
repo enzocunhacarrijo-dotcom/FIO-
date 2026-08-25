@@ -31,6 +31,8 @@ export const users = pgTable(
     passwordHash: text("password_hash"),
     deviceId: text("device_id").unique(),
     objetivoPrincipal: objetivoPrincipalEnum("objetivo_principal"),
+    isPremium: boolean("is_premium").notNull().default(false),
+    lgpdConsentAt: timestamp("lgpd_consent_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

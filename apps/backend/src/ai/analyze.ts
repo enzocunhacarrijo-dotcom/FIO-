@@ -4,7 +4,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { analysisResultSchema, type AnalysisResult, type QuestionnaireResponse } from "@hair-analysis/shared";
 import { env } from "../config/env.js";
 import { db } from "../db/client.js";
-import { analyses, photos, questionnaireResponses } from "../db/schema.js";
+import { analyses, photos, questionnaireResponses, users } from "../db/schema.js";
 import { storage } from "../storage/index.js";
 import { requireAnthropicClient } from "./client.js";
 import { estimateCostUsd } from "./cost.js";
@@ -85,12 +85,15 @@ export async function runAnalysis(userId: string): Promise<AnalysisResult> {
     return toAnalysisResult(cached);
   }
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const recentCount = await db.query.analyses.findMany({
-    where: and(eq(analyses.userId, userId), gte(analyses.createdAt, since)),
-  });
-  if (recentCount.length >= env.RATE_LIMIT_FREE_ANALYSES_PER_DAY) {
-    throw new RateLimitExceededError();
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  if (!user?.isPremium) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentCount = await db.query.analyses.findMany({
+      where: and(eq(analyses.userId, userId), gte(analyses.createdAt, since)),
+    });
+    if (recentCount.length >= env.RATE_LIMIT_FREE_ANALYSES_PER_DAY) {
+      throw new RateLimitExceededError();
+    }
   }
 
   const client = requireAnthropicClient();

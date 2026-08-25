@@ -3,7 +3,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { scanResultSchema, type QuestionnaireResponse, type ScanResult } from "@hair-analysis/shared";
 import { env } from "../config/env.js";
 import { db } from "../db/client.js";
-import { analyses, productScans, questionnaireResponses } from "../db/schema.js";
+import { analyses, productScans, questionnaireResponses, users } from "../db/schema.js";
 import { requireAnthropicClient } from "./client.js";
 import { estimateCostUsd } from "./cost.js";
 import { SCANNER_PROMPT_VERSION, SCANNER_SYSTEM_PROMPT } from "./prompts/scanner.js";
@@ -24,12 +24,15 @@ export class ScanOutputInvalidError extends Error {
 }
 
 export async function runProductScan(userId: string, imageBuffer: Buffer, contentType: "image/jpeg" | "image/png"): Promise<ScanResult> {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const recent = await db.query.productScans.findMany({
-    where: and(eq(productScans.userId, userId), gte(productScans.createdAt, since)),
-  });
-  if (recent.length >= env.RATE_LIMIT_FREE_SCANS_PER_DAY) {
-    throw new ScanRateLimitExceededError();
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  if (!user?.isPremium) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recent = await db.query.productScans.findMany({
+      where: and(eq(productScans.userId, userId), gte(productScans.createdAt, since)),
+    });
+    if (recent.length >= env.RATE_LIMIT_FREE_SCANS_PER_DAY) {
+      throw new ScanRateLimitExceededError();
+    }
   }
 
   const client = requireAnthropicClient();

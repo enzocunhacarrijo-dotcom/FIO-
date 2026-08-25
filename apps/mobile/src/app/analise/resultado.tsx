@@ -211,6 +211,7 @@ export default function ResultadoScreen() {
 
         <Button label="Ver meu progresso" variant="secondary" onPress={() => router.push('/progresso')} />
         <Button label="Ler um produto que você tem em mãos" variant="secondary" onPress={() => router.push('/scanner')} />
+        <Button label="Minha conta" variant="secondary" onPress={() => router.push('/conta')} />
 
         <Text style={styles.disclaimer}>
           Esta é uma avaliação cosmética, não um diagnóstico médico. Para queda intensa, lesão ou dor no couro
