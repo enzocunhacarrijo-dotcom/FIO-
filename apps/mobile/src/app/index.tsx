@@ -20,12 +20,7 @@ export default function Index() {
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
-  const hydrate = useAuthStore((s) => s.hydrate);
   const [destination, setDestination] = useState<Destination | null>(null);
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   useEffect(() => {
     if (status !== 'ready') return;

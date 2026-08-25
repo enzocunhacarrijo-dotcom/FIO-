@@ -14,6 +14,7 @@ import {
   IBMPlexSans_600SemiBold,
 } from '@expo-google-fonts/ibm-plex-sans';
 import { colors } from '@/theme/tokens';
+import { useAuthStore } from '@/store/auth';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,15 +30,26 @@ export default function RootLayout() {
     IBMPlexSans_600SemiBold,
   });
 
+  const authStatus = useAuthStore((s) => s.status);
+  const hydrate = useAuthStore((s) => s.hydrate);
+
+  // Hydration lives here, not in index.tsx — the root layout is the one
+  // route guaranteed to mount before any other, including a direct deep
+  // link or a web refresh landing on a nested route.
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
   const fontsReady = newsreaderLoaded && plexSansLoaded;
+  const ready = fontsReady && authStatus === 'ready';
 
   useEffect(() => {
-    if (fontsReady) {
+    if (ready) {
       SplashScreen.hideAsync();
     }
-  }, [fontsReady]);
+  }, [ready]);
 
-  if (!fontsReady) {
+  if (!ready) {
     return null;
   }
 

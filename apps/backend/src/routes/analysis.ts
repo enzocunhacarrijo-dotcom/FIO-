@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { desc, eq } from "drizzle-orm";
-import { analysisResultSchema, type AnalysisResult } from "@hair-analysis/shared";
+import { analysisHistoryItemSchema, analysisResultSchema, type AnalysisHistoryItem, type AnalysisResult } from "@hair-analysis/shared";
 import { db } from "../db/client.js";
 import { analyses } from "../db/schema.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -53,5 +53,21 @@ export async function analysisRoutes(app: FastifyInstance): Promise<void> {
       createdAt: row.createdAt.toISOString(),
     });
     return reply.send(result);
+  });
+
+  app.get("/api/analysis/history", { preHandler: requireAuth }, async (request, reply) => {
+    const rows = await db.query.analyses.findMany({
+      where: eq(analyses.userId, request.user.sub),
+      orderBy: desc(analyses.createdAt),
+    });
+    const items: AnalysisHistoryItem[] = rows.map((row) => {
+      const result = row.result as { indiceCapilar?: unknown };
+      return analysisHistoryItemSchema.parse({
+        id: row.id,
+        createdAt: row.createdAt.toISOString(),
+        indiceCapilar: result.indiceCapilar,
+      });
+    });
+    return reply.send(items);
   });
 }

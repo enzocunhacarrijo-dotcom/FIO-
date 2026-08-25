@@ -7,6 +7,7 @@ import { env } from "./config/env.js";
 import { queryClient } from "./db/client.js";
 import { analysisRoutes } from "./routes/analysis.js";
 import { authRoutes } from "./routes/auth.js";
+import { habitsRoutes } from "./routes/habits.js";
 import { photosRoutes } from "./routes/photos.js";
 import { questionnaireRoutes } from "./routes/questionnaire.js";
 import { routineRoutes } from "./routes/routine.js";
@@ -26,6 +27,7 @@ await app.register(photosRoutes);
 await app.register(analysisRoutes);
 await app.register(routineRoutes);
 await app.register(scannerRoutes);
+await app.register(habitsRoutes);
 
 app.get("/health", async (_request, reply) => {
   try {

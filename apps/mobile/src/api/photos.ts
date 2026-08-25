@@ -67,3 +67,18 @@ export async function getLatestPhotos(accessToken: string): Promise<PhotoRecord[
   if (!response.ok) throw new ApiError('Não foi possível carregar as fotos.', response.status, 'fetch_error');
   return (json as unknown[]).map((item) => photoRecordSchema.parse(item));
 }
+
+export async function getPhotoHistory(accessToken: string, kind?: PhotoKind): Promise<PhotoRecord[]> {
+  const query = kind ? `?kind=${kind}` : '';
+  let response: Response;
+  try {
+    response = await fetch(`${getBaseUrl()}/api/photos/history${query}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    throw new ApiError('Não foi possível conectar ao servidor.', 0, 'network_error');
+  }
+  const json = await response.json().catch(() => null);
+  if (!response.ok) throw new ApiError('Não foi possível carregar o histórico de fotos.', response.status, 'fetch_error');
+  return (json as unknown[]).map((item) => photoRecordSchema.parse(item));
+}

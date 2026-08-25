@@ -1,4 +1,4 @@
-import { analysisResultSchema, type AnalysisResult } from '@hair-analysis/shared';
+import { analysisHistoryItemSchema, analysisResultSchema, type AnalysisHistoryItem, type AnalysisResult } from '@hair-analysis/shared';
 import { ApiError, request } from './client';
 
 export function requestAnalysis(accessToken: string): Promise<AnalysisResult> {
@@ -15,4 +15,9 @@ export async function getLatestAnalysis(accessToken: string): Promise<AnalysisRe
     if (err instanceof ApiError && err.status === 404) return null;
     throw err;
   }
+}
+
+export async function getAnalysisHistory(accessToken: string): Promise<AnalysisHistoryItem[]> {
+  const r = await request<unknown[]>('/api/analysis/history', { accessToken });
+  return r.map((item) => analysisHistoryItemSchema.parse(item));
 }

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   doublePrecision,
   index,
@@ -144,4 +145,27 @@ export const productScans = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("product_scans_user_id_idx").on(table.userId)],
+);
+
+export const habitSourceEnum = pgEnum("habit_source", ["manual", "healthkit", "whoop", "oura", "garmin"]);
+export const stressLevelEnum = pgEnum("stress_level", ["baixo", "medio", "alto"]);
+
+export const habitCheckins = pgTable(
+  "habit_checkins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    source: habitSourceEnum("source").notNull().default("manual"),
+    sleepWell: boolean("sleep_well"),
+    stressLevel: stressLevelEnum("stress_level"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("habit_checkins_user_date_source_unique").on(table.userId, table.date, table.source),
+    index("habit_checkins_user_id_idx").on(table.userId),
+  ],
 );

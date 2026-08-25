@@ -93,3 +93,12 @@ export const analysisResultSchema = analysisAiOutputSchema.extend({
   indiceCapilar: subScoresSchema.extend({ total: z.number().min(0).max(100) }),
 });
 export type AnalysisResult = z.infer<typeof analysisResultSchema>;
+
+/** Lightweight summary for the progress timeline and evolution chart —
+ * avoids shipping the full routine/ingredient text for every past entry. */
+export const analysisHistoryItemSchema = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  indiceCapilar: subScoresSchema.extend({ total: z.number().min(0).max(100) }),
+});
+export type AnalysisHistoryItem = z.infer<typeof analysisHistoryItemSchema>;

@@ -209,6 +209,7 @@ export default function ResultadoScreen() {
           </>
         )}
 
+        <Button label="Ver meu progresso" variant="secondary" onPress={() => router.push('/progresso')} />
         <Button label="Ler um produto que você tem em mãos" variant="secondary" onPress={() => router.push('/scanner')} />
 
         <Text style={styles.disclaimer}>

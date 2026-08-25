@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { photoKindSchema, photoRecordSchema, photoUploadLimits, type PhotoRecord } from "@hair-analysis/shared";
 import { db } from "../db/client.js";
 import { photos } from "../db/schema.js";
@@ -72,6 +72,22 @@ export async function photosRoutes(app: FastifyInstance): Promise<void> {
     }
 
     return reply.status(201).send(photoRecordSchema.parse(toPhotoRecord(row)));
+  });
+
+  app.get("/api/photos/history", { preHandler: requireAuth }, async (request, reply) => {
+    const { kind } = request.query as { kind?: string };
+    const kindParsed = kind ? photoKindSchema.safeParse(kind) : undefined;
+    if (kind && !kindParsed?.success) {
+      return reply.status(400).send({ error: "invalid_request", message: "Tipo de foto inválido." });
+    }
+
+    const rows = await db.query.photos.findMany({
+      where: kindParsed?.success
+        ? and(eq(photos.userId, request.user.sub), eq(photos.kind, kindParsed.data))
+        : eq(photos.userId, request.user.sub),
+      orderBy: desc(photos.createdAt),
+    });
+    return reply.send(rows.map((row) => photoRecordSchema.parse(toPhotoRecord(row))));
   });
 
   app.get("/api/photos/latest", { preHandler: requireAuth }, async (request, reply) => {
