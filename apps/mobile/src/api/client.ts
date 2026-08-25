@@ -17,12 +17,7 @@ function getBaseUrl(): string {
   return url;
 }
 
-export async function request<T>(
-  path: string,
-  options: { method?: string; body?: unknown; accessToken?: string } = {},
-): Promise<T> {
-  const { method = 'GET', body, accessToken } = options;
-
+async function doFetch<T>(path: string, method: string, body: unknown, accessToken: string | undefined): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${getBaseUrl()}${path}`, {
@@ -50,4 +45,29 @@ export async function request<T>(
   }
 
   return json as T;
+}
+
+export async function request<T>(
+  path: string,
+  options: { method?: string; body?: unknown; accessToken?: string } = {},
+): Promise<T> {
+  const { method = 'GET', body, accessToken } = options;
+
+  try {
+    return await doFetch<T>(path, method, body, accessToken);
+  } catch (err) {
+    // Access tokens live 15 minutes. On expiry, refresh once and retry
+    // transparently instead of surfacing "Token inválido ou ausente" to
+    // the user mid-session.
+    if (err instanceof ApiError && err.status === 401 && err.code === 'unauthorized' && accessToken) {
+      const { useAuthStore } = await import('@/store/auth');
+      const refreshed = await useAuthStore.getState().refresh();
+      const newToken = useAuthStore.getState().accessToken;
+      if (refreshed && newToken) {
+        return await doFetch<T>(path, method, body, newToken);
+      }
+      throw new ApiError('Sessão expirada. Entre novamente.', 401, 'session_expired');
+    }
+    throw err;
+  }
 }

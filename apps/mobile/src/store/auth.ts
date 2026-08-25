@@ -35,6 +35,12 @@ async function clearAuth(): Promise<void> {
   await deleteItem(KEYS.user);
 }
 
+// Several screens fire authenticated requests in parallel (Promise.all).
+// If each one independently hits an expired access token, they must share
+// a single refresh call — otherwise they race the backend's refresh-token
+// rotation and the loser wipes out the winner's just-restored session.
+let inFlightRefresh: Promise<boolean> | null = null;
+
 type AuthState = {
   status: 'loading' | 'ready';
   user: CurrentUser | null;
@@ -47,6 +53,7 @@ type AuthState = {
   loginAccount: (email: string, password: string) => Promise<boolean>;
   continueAsGuest: () => Promise<boolean>;
   setObjetivo: (objetivo: ObjetivoPrincipal) => Promise<boolean>;
+  refresh: () => Promise<boolean>;
   clearError: () => void;
 };
 
@@ -131,6 +138,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ error: err instanceof ApiError ? err.message : 'Não foi possível salvar seu objetivo.', busy: false });
       return false;
     }
+  },
+
+  refresh: async () => {
+    if (inFlightRefresh) return inFlightRefresh;
+    inFlightRefresh = (async () => {
+      const { refreshToken } = get();
+      if (!refreshToken) {
+        await clearAuth();
+        set({ user: null, accessToken: null, refreshToken: null });
+        return false;
+      }
+      try {
+        const auth = await authApi.refresh(refreshToken);
+        await persistAuth(auth);
+        set({ user: auth.user, accessToken: auth.accessToken, refreshToken: auth.refreshToken });
+        return true;
+      } catch {
+        await clearAuth();
+        set({ user: null, accessToken: null, refreshToken: null });
+        return false;
+      } finally {
+        inFlightRefresh = null;
+      }
+    })();
+    return inFlightRefresh;
   },
 
   clearError: () => set({ error: null }),
