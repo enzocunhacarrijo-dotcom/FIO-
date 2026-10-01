@@ -1,9 +1,11 @@
 import {
   authResponseSchema,
   currentUserSchema,
+  googleStartResponseSchema,
   userDataExportSchema,
   type AuthResponse,
   type CurrentUser,
+  type GoogleStartResponse,
   type UserDataExport,
 } from '@hair-analysis/shared';
 import { request } from './client';
@@ -24,6 +26,28 @@ export function loginAsGuest(deviceId: string, lgpdConsent: boolean): Promise<Au
   return request<AuthResponse>('/api/auth/guest', { method: 'POST', body: { deviceId, lgpdConsent } }).then((r) =>
     authResponseSchema.parse(r),
   );
+}
+
+export function googleStart(redirectUri: string, accessToken?: string): Promise<GoogleStartResponse> {
+  return request<GoogleStartResponse>('/api/auth/google/start', {
+    method: 'POST',
+    accessToken,
+    body: { redirectUri, lgpdConsent: true },
+  }).then((r) => googleStartResponseSchema.parse(r));
+}
+
+export function googleExchange(code: string): Promise<AuthResponse> {
+  return request<AuthResponse>('/api/auth/google/exchange', { method: 'POST', body: { code } }).then((r) =>
+    authResponseSchema.parse(r),
+  );
+}
+
+export function upgradeGuest(accessToken: string, email: string, password: string): Promise<AuthResponse> {
+  return request<AuthResponse>('/api/me/upgrade', {
+    method: 'POST',
+    accessToken,
+    body: { email, password, lgpdConsent: true },
+  }).then((r) => authResponseSchema.parse(r));
 }
 
 export function refresh(refreshToken: string): Promise<AuthResponse> {

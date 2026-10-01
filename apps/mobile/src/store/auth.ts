@@ -1,8 +1,13 @@
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { create } from 'zustand';
 import type { AuthResponse, CurrentUser } from '@hair-analysis/shared';
 import * as authApi from '@/api/auth';
 import { ApiError } from '@/api/client';
+import { GOOGLE_GENERIC_ERROR, parseGoogleCallback } from '@/lib/google-auth';
 import { deleteItem, getItem, setItem } from '@/lib/secure-storage';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const KEYS = {
   accessToken: 'access_token',
@@ -41,6 +46,8 @@ async function clearAuth(): Promise<void> {
 // rotation and the loser wipes out the winner's just-restored session.
 let inFlightRefresh: Promise<boolean> | null = null;
 
+export type GoogleSignInResult = 'ok' | 'cancelled' | 'error';
+
 type AuthState = {
   status: 'loading' | 'ready';
   user: CurrentUser | null;
@@ -51,7 +58,12 @@ type AuthState = {
   lgpdConsented: boolean;
   setLgpdConsented: (value: boolean) => void;
   hydrate: () => Promise<void>;
+  /** Cria conta com e-mail/senha. Se for convidado, converte mantendo os dados. */
+  signUp: (email: string, password: string) => Promise<boolean>;
+  /** Alias de signUp (nome antigo). */
   registerAccount: (email: string, password: string) => Promise<boolean>;
+  /** 'cancelled' = usuário fechou o navegador (sem erro). Converte convidado. */
+  signInWithGoogle: () => Promise<GoogleSignInResult>;
   loginAccount: (email: string, password: string) => Promise<boolean>;
   continueAsGuest: () => Promise<boolean>;
   setPremium: (isPremium: boolean) => Promise<boolean>;
@@ -89,16 +101,57 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  registerAccount: async (email, password) => {
+  signUp: async (email, password) => {
     set({ busy: true, error: null });
     try {
-      const auth = await authApi.register(email, password, get().lgpdConsented);
+      const { user, accessToken } = get();
+      const auth =
+        user?.kind === 'guest' && accessToken
+          ? await authApi.upgradeGuest(accessToken, email, password)
+          : await authApi.register(email, password, get().lgpdConsented);
       await persistAuth(auth);
       set({ user: auth.user, accessToken: auth.accessToken, refreshToken: auth.refreshToken, busy: false });
       return true;
     } catch (err) {
       set({ error: err instanceof ApiError ? err.message : 'Não foi possível criar sua conta.', busy: false });
       return false;
+    }
+  },
+
+  registerAccount: (email, password) => get().signUp(email, password),
+
+  signInWithGoogle: async () => {
+    const { user, accessToken, lgpdConsented } = get();
+    const isGuest = user?.kind === 'guest' && !!accessToken;
+    if (!isGuest && !lgpdConsented) {
+      set({ error: 'Aceite a Política de Privacidade para continuar.' });
+      return 'error';
+    }
+    set({ busy: true, error: null });
+    try {
+      const redirectUri = Linking.createURL('auth/google');
+      const { authUrl } = await authApi.googleStart(redirectUri, isGuest ? (accessToken ?? undefined) : undefined);
+      const browser = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      if (browser.type !== 'success') {
+        set({ busy: false });
+        return 'cancelled';
+      }
+      const result = parseGoogleCallback(browser.url);
+      if (result.kind === 'cancelled') {
+        set({ busy: false });
+        return 'cancelled';
+      }
+      if (result.kind === 'error') {
+        set({ error: result.message, busy: false });
+        return 'error';
+      }
+      const auth = await authApi.googleExchange(result.code);
+      await persistAuth(auth);
+      set({ user: auth.user, accessToken: auth.accessToken, refreshToken: auth.refreshToken, busy: false });
+      return 'ok';
+    } catch (err) {
+      set({ error: err instanceof ApiError ? err.message : GOOGLE_GENERIC_ERROR, busy: false });
+      return 'error';
     }
   },
 
