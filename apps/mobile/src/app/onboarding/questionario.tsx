@@ -5,7 +5,6 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/button';
-import { HelpNote } from '@/components/help-note';
 import { OptionCard } from '@/components/option-card';
 import { ProgressBar } from '@/components/progress-bar';
 import { ScreenHeader } from '@/components/screen-header';
@@ -91,13 +90,9 @@ export default function QuestionarioScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Animated.View key={question.id} entering={FadeInRight.duration(220)} style={styles.questionBody}>
           <View style={styles.questionHeader}>
-            <Text variant="h1">{question.title}</Text>
-            {question.subtitle && (
-              <Text variant="body" tone="muted">
-                {question.subtitle}
-              </Text>
-            )}
-            {question.helpText && <HelpNote key={question.id} text={question.helpText} />}
+            <Text variant="h1" style={styles.centerText}>
+              {question.title}
+            </Text>
           </View>
 
           {question.kind === 'single' && (
@@ -181,6 +176,7 @@ const styles = StyleSheet.create({
   questionBody: {
     gap: spacing.xxl,
   },
+  centerText: { textAlign: 'center' },
   questionHeader: {
     gap: spacing.sm,
   },
