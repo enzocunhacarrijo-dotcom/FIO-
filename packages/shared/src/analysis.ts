@@ -65,6 +65,11 @@ export const qualidadeDasImagensSchema = z.object({
   problemas: z.array(z.string()),
 });
 
+export const discrepanciaSchema = z.object({
+  observacao: z.string(),
+});
+export type Discrepancia = z.infer<typeof discrepanciaSchema>;
+
 /** Exact shape requested from — and validated against — the model's structured output. */
 export const analysisAiOutputSchema = z.object({
   curvatura: curvaturaAnaliseSchema,
@@ -79,6 +84,7 @@ export const analysisAiOutputSchema = z.object({
   ingredientesAEvitar: z.array(ingredienteSchema),
   rotinaSemanal: z.array(rotinaDiaSchema),
   observacoesAoUsuario: z.string(),
+  discrepancias: z.array(discrepanciaSchema),
   sinalDeAlertaMedico: z.boolean(),
   motivoAlerta: z.string().nullable(),
   qualidadeDasImagens: qualidadeDasImagensSchema,

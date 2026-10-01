@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, gte } from "drizzle-orm";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { analysisResultSchema, type AnalysisResult, type QuestionnaireResponse } from "@hair-analysis/shared";
+import {
+  analysisResultSchema,
+  computeQuestionnaireRedFlags,
+  type AnalysisResult,
+  type QuestionnaireResponse,
+} from "@hair-analysis/shared";
 import { env } from "../config/env.js";
 import { db } from "../db/client.js";
 import { analyses, photos, questionnaireResponses, users } from "../db/schema.js";
@@ -108,9 +113,19 @@ export async function runAnalysis(userId: string): Promise<AnalysisResult> {
     content.push({ type: "text", text: PHOTO_LABELS[kind] });
     content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: bytes.toString("base64") } });
   }
+  const respostas = questionnaire.respostas as QuestionnaireResponse;
   content.push({
     type: "text",
-    text: `Contexto do questionário (JSON):\n${JSON.stringify(questionnaire.respostas as QuestionnaireResponse)}`,
+    text: `Contexto do questionário (JSON):\n${JSON.stringify(respostas)}`,
+  });
+
+  const redFlags = computeQuestionnaireRedFlags(respostas);
+  const redFlagsText = redFlags.sugereAvaliacaoMedica
+    ? `Sinais de alerta identificados no questionário:\n${redFlags.motivos.map((m) => `- ${m}`).join("\n")}`
+    : "Sinais de alerta identificados no questionário: nenhum.";
+  content.push({
+    type: "text",
+    text: `${redFlagsText}\nCombinação química de alto risco de quebra relatada (descoloração/luzes/mechas + relaxamento ou progressiva): ${redFlags.combinacaoQuimicaAltoRisco ? "sim" : "não"}.`,
   });
 
   async function callModel() {

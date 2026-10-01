@@ -60,6 +60,7 @@ export const analysisAiOutputSchemaV4 = z.object({
     }),
   ),
   observacoesAoUsuario: z.string(),
+  discrepancias: z.array(z.object({ observacao: z.string() })),
   sinalDeAlertaMedico: z.boolean(),
   motivoAlerta: z.string().nullable(),
   qualidadeDasImagens: z.object({

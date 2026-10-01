@@ -5,6 +5,7 @@ import multipart from "@fastify/multipart";
 import { healthCheckResponseSchema, photoUploadLimits } from "@hair-analysis/shared";
 import { env } from "./config/env.js";
 import { queryClient } from "./db/client.js";
+import { runMigrations } from "./db/migrate.js";
 import { analysisRoutes } from "./routes/analysis.js";
 import { authRoutes } from "./routes/auth.js";
 import { habitsRoutes } from "./routes/habits.js";
@@ -12,6 +13,8 @@ import { photosRoutes } from "./routes/photos.js";
 import { questionnaireRoutes } from "./routes/questionnaire.js";
 import { routineRoutes } from "./routes/routine.js";
 import { scannerRoutes } from "./routes/scanner.js";
+
+await runMigrations();
 
 const app = Fastify({ logger: true });
 
