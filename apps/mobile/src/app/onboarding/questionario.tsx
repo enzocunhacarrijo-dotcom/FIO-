@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/button';
@@ -8,13 +9,14 @@ import { HelpNote } from '@/components/help-note';
 import { OptionCard } from '@/components/option-card';
 import { ProgressBar } from '@/components/progress-bar';
 import { ScreenHeader } from '@/components/screen-header';
+import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { resolveOptions, toggleMultiValue } from '@/data/questions';
 import { submitQuestionnaire } from '@/api/questionnaire';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/store/auth';
 import { useQuestionnaireStore } from '@/store/questionnaire';
-import { colors, fontFamily, spacing } from '@/theme/tokens';
+import { colors, spacing } from '@/theme/tokens';
 
 export default function QuestionarioScreen() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -87,9 +89,14 @@ export default function QuestionarioScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Animated.View key={question.id} entering={FadeInRight.duration(220)} style={styles.questionBody}>
           <View style={styles.questionHeader}>
-            <Text style={styles.title}>{question.title}</Text>
-            {question.subtitle && <Text style={styles.subtitle}>{question.subtitle}</Text>}
+            <Text variant="h1">{question.title}</Text>
+            {question.subtitle && (
+              <Text variant="body" tone="muted">
+                {question.subtitle}
+              </Text>
+            )}
             {question.helpText && <HelpNote key={question.id} text={question.helpText} />}
           </View>
 
@@ -136,10 +143,15 @@ export default function QuestionarioScreen() {
               style={styles.textArea}
             />
           )}
+          </Animated.View>
         </ScrollView>
 
         <View style={styles.footer}>
-          {submitError && <Text style={styles.error}>{submitError}</Text>}
+          {submitError && (
+            <Text variant="bodySm" tone="danger">
+              {submitError}
+            </Text>
+          )}
           <Button
             label={isLast ? 'Concluir' : 'Continuar'}
             onPress={handleContinue}
@@ -163,23 +175,14 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    gap: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
+  },
+  questionBody: {
+    gap: spacing.xxl,
   },
   questionHeader: {
     gap: spacing.sm,
-  },
-  title: {
-    fontFamily: fontFamily.displaySemiBold,
-    fontSize: 23,
-    lineHeight: 29,
-    color: colors.text,
-  },
-  subtitle: {
-    fontFamily: fontFamily.body,
-    fontSize: 13.5,
-    lineHeight: 20,
-    color: colors.textMuted,
   },
   options: {
     gap: spacing.md,
@@ -194,10 +197,5 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     gap: spacing.sm,
-  },
-  error: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: colors.dangerText,
   },
 });
