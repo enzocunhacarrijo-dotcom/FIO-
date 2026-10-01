@@ -50,6 +50,13 @@
       "when": 1787619296641,
       "tag": "0006_rapid_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790861529721,
+      "tag": "0007_harsh_mandarin",
+      "breakpoints": true
     }
   ]
 }

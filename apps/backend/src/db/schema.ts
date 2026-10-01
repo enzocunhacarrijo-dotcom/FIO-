@@ -29,6 +29,7 @@ export const users = pgTable(
     kind: userKindEnum("kind").notNull(),
     email: text("email").unique(),
     passwordHash: text("password_hash"),
+    googleSub: text("google_sub").unique(),
     deviceId: text("device_id").unique(),
     objetivoPrincipal: objetivoPrincipalEnum("objetivo_principal"),
     isPremium: boolean("is_premium").notNull().default(false),
@@ -39,10 +40,27 @@ export const users = pgTable(
   (table) => [
     check(
       "registered_has_credentials",
-      sql`${table.kind} <> 'registered' OR (${table.email} IS NOT NULL AND ${table.passwordHash} IS NOT NULL)`,
+      sql`${table.kind} <> 'registered' OR (${table.email} IS NOT NULL AND (${table.passwordHash} IS NOT NULL OR ${table.googleSub} IS NOT NULL))`,
     ),
     check("guest_has_device_id", sql`${table.kind} <> 'guest' OR ${table.deviceId} IS NOT NULL`),
   ],
+);
+
+// Short-lived, single-use codes handed back to the app through the OAuth deep
+// link. Only the sha256 is stored; the code itself is exchanged for a JWT pair.
+export const oauthLoginCodes = pgTable(
+  "oauth_login_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    codeHash: text("code_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("oauth_login_codes_user_id_idx").on(table.userId)],
 );
 
 export const refreshTokens = pgTable(

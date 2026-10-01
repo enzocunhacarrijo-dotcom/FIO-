@@ -24,6 +24,22 @@ export const guestRequestSchema = z.object({
 });
 export type GuestRequest = z.infer<typeof guestRequestSchema>;
 
+export const upgradeGuestRequestSchema = registerRequestSchema;
+export type UpgradeGuestRequest = RegisterRequest;
+
+// redirectUri is where the backend sends the browser back to (the app's deep link).
+export const googleStartRequestSchema = z.object({
+  redirectUri: z.string().max(500).regex(/^(fio|exp|exps):\/\//),
+  lgpdConsent: lgpdConsentField,
+});
+export type GoogleStartRequest = z.infer<typeof googleStartRequestSchema>;
+
+export const googleStartResponseSchema = z.object({ authUrl: z.string().url() });
+export type GoogleStartResponse = z.infer<typeof googleStartResponseSchema>;
+
+export const googleExchangeRequestSchema = z.object({ code: z.string().length(64) });
+export type GoogleExchangeRequest = z.infer<typeof googleExchangeRequestSchema>;
+
 export const refreshRequestSchema = z.object({
   refreshToken: z.string().min(1),
 });
@@ -35,6 +51,7 @@ export const currentUserSchema = z.object({
   email: z.string().nullable(),
   objetivoPrincipal: objetivoPrincipalSchema.nullable(),
   isPremium: z.boolean(),
+  providers: z.array(z.enum(["password", "google"])).default([]),
 });
 export type CurrentUser = z.infer<typeof currentUserSchema>;
 
