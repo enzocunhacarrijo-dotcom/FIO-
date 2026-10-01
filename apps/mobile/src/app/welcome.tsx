@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
 import { Checkbox } from '@/components/checkbox';
+import { Disclaimer } from '@/components/disclaimer';
 import { Logo } from '@/components/logo';
+import { Strand } from '@/components/strand';
+import { Text } from '@/components/text';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontFamily, spacing } from '@/theme/tokens';
+import { colors, radii, spacing } from '@/theme/tokens';
 
 export default function WelcomeScreen() {
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
@@ -24,90 +29,93 @@ export default function WelcomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.content}>
+    <View style={styles.root}>
+      <ScrollView contentContainerStyle={styles.scroll} bounces={false}>
         <View style={styles.hero}>
-          <Logo size={52} />
-          <Text style={styles.title}>Entenda seu cabelo de verdade</Text>
-          <Text style={styles.subtitle}>
-            Fotos guiadas, um questionário curto e um perfil capilar claro e personalizado — para qualquer tipo de
-            cabelo, de qualquer pessoa.
-          </Text>
+          <View style={styles.strandDeco} pointerEvents="none">
+            <Strand width={320} stroke={14} color={colors.primaryStrong} />
+          </View>
+          <SafeAreaView edges={['top']}>
+            <Animated.View entering={FadeInDown.duration(220)} style={styles.heroContent}>
+              <Logo size={44} variant="mono" />
+              <Text variant="display" tone="onPrimary">
+                Entenda seu cabelo de verdade
+              </Text>
+              <Text variant="bodyLg" tone="onPrimary" style={styles.subtitle}>
+                Fotos guiadas, um questionário curto e um perfil capilar claro e personalizado — para qualquer tipo de
+                cabelo, de qualquer pessoa.
+              </Text>
+            </Animated.View>
+          </SafeAreaView>
         </View>
 
-        <View style={styles.actions}>
-          {error && <Text style={styles.error}>{error}</Text>}
+        <SafeAreaView edges={['bottom']} style={styles.actionsSafe}>
+          <Animated.View entering={FadeInDown.duration(220).delay(40)} style={styles.actions}>
+            {error && (
+              <Text variant="bodySm" tone="danger">
+                {error}
+              </Text>
+            )}
 
-          <Checkbox
-            checked={lgpdConsented}
-            onToggle={setLgpdConsented}
-            label="Li e aceito o uso das minhas fotos, respostas do questionário e dados de progresso para gerar minha análise. Posso exportar ou excluir tudo depois, em Minha conta › Privacidade."
-          />
+            <Card variant="sunken">
+              <Checkbox
+                checked={lgpdConsented}
+                onToggle={setLgpdConsented}
+                label="Li e aceito o uso das minhas fotos, respostas do questionário e dados de progresso para gerar minha análise. Posso exportar ou excluir tudo depois, em Minha conta › Privacidade."
+              />
+            </Card>
 
-          <Button label="Criar conta" onPress={() => router.push('/register')} disabled={busy || !lgpdConsented} />
-          <Button
-            label="Já tenho conta"
-            variant="secondary"
-            onPress={() => router.push('/login')}
-            disabled={busy || !lgpdConsented}
-          />
-          <Button
-            label="Continuar sem conta"
-            variant="secondary"
-            onPress={handleGuest}
-            loading={guestLoading}
-            disabled={(busy && !guestLoading) || !lgpdConsented}
-          />
-          <Text style={styles.disclaimer}>
-            Sem conta, seus dados ficam associados só a este dispositivo. Você pode criar uma conta depois.
-          </Text>
-        </View>
-      </View>
-    </SafeAreaView>
+            <View style={styles.buttons}>
+              <Button label="Criar conta" onPress={() => router.push('/register')} disabled={busy || !lgpdConsented} />
+              <Button
+                label="Já tenho conta"
+                variant="secondary"
+                onPress={() => router.push('/login')}
+                disabled={busy || !lgpdConsented}
+              />
+              <Button
+                label="Continuar sem conta"
+                variant="ghost"
+                onPress={handleGuest}
+                loading={guestLoading}
+                disabled={(busy && !guestLoading) || !lgpdConsented}
+              />
+            </View>
+            <Disclaimer>
+              Sem conta, seus dados ficam associados só a este dispositivo. Você pode criar uma conta depois.
+            </Disclaimer>
+          </Animated.View>
+        </SafeAreaView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    justifyContent: 'space-between',
-  },
+  root: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flexGrow: 1 },
   hero: {
-    marginTop: spacing.xxl * 2,
+    minHeight: '55%',
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: radii.xxl,
+    borderBottomRightRadius: radii.xxl,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  strandDeco: { position: 'absolute', right: -60, top: 40, opacity: 0.6 },
+  heroContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxxl,
+    paddingBottom: spacing.xxxl,
     gap: spacing.lg,
   },
-  title: {
-    fontFamily: fontFamily.displaySemiBold,
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.5,
-    color: colors.text,
-  },
-  subtitle: {
-    fontFamily: fontFamily.body,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.textMuted,
-  },
+  subtitle: { opacity: 0.85 },
+  actionsSafe: { flex: 1 },
   actions: {
-    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
+    gap: spacing.xxl,
   },
-  error: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: colors.dangerText,
-  },
-  disclaimer: {
-    fontFamily: fontFamily.body,
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.textFaint,
-    marginTop: spacing.xs,
-  },
+  buttons: { gap: spacing.md },
 });

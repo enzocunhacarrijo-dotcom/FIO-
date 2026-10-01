@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
 import { ScreenHeader } from '@/components/screen-header';
+import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontFamily, spacing } from '@/theme/tokens';
+import { colors, spacing } from '@/theme/tokens';
 
 export default function LoginScreen() {
   const loginAccount = useAuthStore((s) => s.loginAccount);
@@ -27,7 +29,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <ScreenHeader title="Entrar" onBack={() => router.back()} />
 
-          <View style={styles.form}>
+          <Animated.View entering={FadeInDown.duration(220)} style={styles.form}>
             <TextField
               label="E-mail"
               value={email}
@@ -45,11 +47,17 @@ export default function LoginScreen() {
               autoCapitalize="none"
               placeholder="Sua senha"
             />
-            {error && <Text style={styles.error}>{error}</Text>}
-          </View>
-
-          <Button label="Entrar" onPress={handleSubmit} loading={busy} disabled={!email || !password} />
+            {error && (
+              <Text variant="bodySm" tone="danger">
+                {error}
+              </Text>
+            )}
+          </Animated.View>
         </ScrollView>
+
+        <View style={styles.footer}>
+          <Button label="Entrar" onPress={handleSubmit} loading={busy} disabled={!email || !password} />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -63,14 +71,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
-    gap: spacing.xl,
+    gap: spacing.xxl,
   },
   form: {
     gap: spacing.lg,
   },
-  error: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: colors.dangerText,
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
 });

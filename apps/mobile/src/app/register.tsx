@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
 import { ScreenHeader } from '@/components/screen-header';
+import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontFamily, spacing } from '@/theme/tokens';
+import { colors, spacing } from '@/theme/tokens';
 
 export default function RegisterScreen() {
   const registerAccount = useAuthStore((s) => s.registerAccount);
@@ -42,7 +44,7 @@ export default function RegisterScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <ScreenHeader title="Criar conta" onBack={() => router.back()} />
 
-          <View style={styles.form}>
+          <Animated.View entering={FadeInDown.duration(220)} style={styles.form}>
             <TextField
               label="E-mail"
               value={email}
@@ -68,11 +70,17 @@ export default function RegisterScreen() {
               autoCapitalize="none"
               placeholder="Repita a senha"
             />
-            {(localError || error) && <Text style={styles.error}>{localError ?? error}</Text>}
-          </View>
-
-          <Button label="Criar conta" onPress={handleSubmit} loading={busy} disabled={!email || !password} />
+            {(localError || error) && (
+              <Text variant="bodySm" tone="danger">
+                {localError ?? error}
+              </Text>
+            )}
+          </Animated.View>
         </ScrollView>
+
+        <View style={styles.footer}>
+          <Button label="Criar conta" onPress={handleSubmit} loading={busy} disabled={!email || !password} />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -86,14 +94,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
-    gap: spacing.xl,
+    gap: spacing.xxl,
   },
   form: {
     gap: spacing.lg,
   },
-  error: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: colors.dangerText,
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
 });

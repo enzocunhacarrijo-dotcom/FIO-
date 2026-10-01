@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
 import { hasCompletedQuestionnaire } from '@/api/questionnaire';
 import { getLatestPhotos } from '@/api/photos';
 import { getLatestAnalysis } from '@/api/analysis';
 import { CAPTURE_STEPS } from '@/data/capture-steps';
+import { LogoMark } from '@/components/logo';
+import { Strand } from '@/components/strand';
 import { colors } from '@/theme/tokens';
 
 type Destination =
@@ -55,7 +57,8 @@ export default function Index() {
   if (!destination) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.text} />
+        <LogoMark size={72} />
+        <Strand width={64} stroke={3} color={colors.primary} animated />
       </View>
     );
   }
@@ -68,6 +71,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 20,
     backgroundColor: colors.bg,
   },
 });
