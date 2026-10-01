@@ -1,40 +1,40 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import { Icon } from '@/components/icon';
+import { Text } from '@/components/text';
+import { colors, motion, radii, spacing } from '@/theme/tokens';
 
 export function HelpNote({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <View>
-      <Pressable accessibilityRole="button" onPress={() => setOpen((v) => !v)} hitSlop={8}>
-        <Text style={styles.trigger}>{open ? 'Ocultar explicação' : 'O que isso quer dizer?'}</Text>
+    <Animated.View layout={LinearTransition.duration(motion.duration.base)}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((v) => !v)}
+        hitSlop={8}
+        style={styles.trigger}
+      >
+        <Icon name="info" size={16} color={colors.primaryStrong} />
+        <Text variant="label" tone="primary" style={styles.triggerText}>
+          {open ? 'Ocultar explicação' : 'O que isso quer dizer?'}
+        </Text>
       </Pressable>
       {open && (
-        <View style={styles.box}>
-          <Text style={styles.text}>{text}</Text>
-        </View>
+        <Animated.View entering={FadeIn.duration(motion.duration.base)} exiting={FadeOut.duration(motion.duration.fast)}>
+          <View style={styles.box}>
+            <Text variant="bodySm">{text}</Text>
+          </View>
+        </Animated.View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  trigger: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 12.5,
-    color: colors.primaryStrong,
-  },
-  box: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.primaryTint,
-    borderRadius: radii.sm,
-    padding: spacing.md,
-  },
-  text: {
-    fontFamily: fontFamily.body,
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: colors.text,
-  },
+  trigger: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  triggerText: { fontSize: 13 },
+  box: { marginTop: spacing.sm, backgroundColor: colors.primaryTint, borderRadius: 16, padding: spacing.md },
 });

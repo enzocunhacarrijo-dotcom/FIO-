@@ -1,9 +1,21 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
+import { Card } from '@/components/card';
+import { Icon, type IconName } from '@/components/icon';
+import { ListRow } from '@/components/list-row';
 import { ScreenHeader } from '@/components/screen-header';
+import { SectionHeader } from '@/components/section-header';
+import { Text } from '@/components/text';
 import { ARTIGOS } from '@/data/artigos';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, motion, radii, spacing } from '@/theme/tokens';
+
+const ARTICLE_STYLES: { band: string; fg: string; icon: IconName }[] = [
+  { band: colors.primaryTint, fg: colors.primaryStrong, icon: 'leaf' },
+  { band: colors.accentTint, fg: colors.accentStrong, icon: 'sparkle' },
+  { band: colors.successTint, fg: colors.success, icon: 'drop' },
+];
 
 export default function AprenderScreen() {
   return (
@@ -11,31 +23,45 @@ export default function AprenderScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader title="Aprender" onBack={() => router.back()} />
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/aprender/glossario')}
-          style={({ pressed }) => [styles.glossarioCard, pressed && styles.pressed]}
-        >
-          <View style={styles.glossarioText}>
-            <Text style={styles.glossarioTitle}>Glossário</Text>
-            <Text style={styles.glossarioSub}>Termos de cuidado capilar explicados em linguagem simples</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
+        <Animated.View entering={FadeInDown.duration(motion.duration.base)}>
+          <Card variant="tint" padding={spacing.sm}>
+            <ListRow
+              icon="info"
+              title="Glossário"
+              subtitle="Termos de cuidado capilar explicados em linguagem simples"
+              onPress={() => router.push('/aprender/glossario')}
+            />
+          </Card>
+        </Animated.View>
 
-        <Text style={styles.sectionLabel}>Artigos</Text>
-        <View style={styles.cardStack}>
-          {ARTIGOS.map((artigo) => (
-            <Pressable
-              key={artigo.slug}
-              accessibilityRole="button"
-              onPress={() => router.push(`/aprender/artigo/${artigo.slug}`)}
-              style={({ pressed }) => [styles.artigoCard, pressed && styles.pressed]}
-            >
-              <Text style={styles.artigoTitulo}>{artigo.titulo}</Text>
-              <Text style={styles.artigoResumo}>{artigo.resumo}</Text>
-            </Pressable>
-          ))}
+        <View style={styles.section}>
+          <SectionHeader title="Artigos" />
+          <View style={styles.cardStack}>
+            {ARTIGOS.map((artigo, i) => {
+              const style = ARTICLE_STYLES[i % ARTICLE_STYLES.length];
+              return (
+                <Animated.View key={artigo.slug} entering={FadeInDown.duration(motion.duration.base).delay((i + 1) * 40)}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push(`/aprender/artigo/${artigo.slug}`)}
+                    style={({ pressed }) => pressed && styles.pressed}
+                  >
+                    <Card padding={0} style={styles.artigoCard}>
+                      <View style={[styles.band, { backgroundColor: style.band }]}>
+                        <Icon name={style.icon} size={24} color={style.fg} />
+                      </View>
+                      <View style={styles.artigoBody}>
+                        <Text variant="h3">{artigo.titulo}</Text>
+                        <Text variant="bodySm" tone="muted">
+                          {artigo.resumo}
+                        </Text>
+                      </View>
+                    </Card>
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -44,38 +70,17 @@ export default function AprenderScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.xl },
-  glossarioCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.primaryTint,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    minHeight: 64,
-  },
-  glossarioText: { flex: 1, gap: 2 },
-  glossarioTitle: { fontFamily: fontFamily.bodySemiBold, fontSize: 15, color: colors.primaryStrong },
-  glossarioSub: { fontFamily: fontFamily.body, fontSize: 12, color: colors.primaryStrong },
-  chevron: { fontSize: 22, color: colors.primaryStrong },
-  sectionLabel: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: colors.textFaint,
-    marginBottom: -spacing.md,
-  },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxxl, gap: spacing.xxl },
+  section: { gap: spacing.lg },
   cardStack: { gap: spacing.md },
-  artigoCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: 4,
+  artigoCard: { overflow: 'hidden' },
+  band: {
+    height: 56,
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
   },
-  artigoTitulo: { fontFamily: fontFamily.bodySemiBold, fontSize: 14.5, color: colors.text },
-  artigoResumo: { fontFamily: fontFamily.body, fontSize: 12.5, lineHeight: 18, color: colors.textMuted },
+  artigoBody: { padding: spacing.xl, gap: spacing.xs },
   pressed: { opacity: 0.85 },
 });

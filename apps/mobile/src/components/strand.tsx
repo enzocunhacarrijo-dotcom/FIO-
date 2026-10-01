@@ -51,7 +51,7 @@ export function Strand({ width = 48, stroke = 2, color = colors.primary, animate
   const scale = width / vbW;
 
   return (
-    <Svg width={width} height={height} viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`} style={style} accessibilityElementsHidden>
+    <Svg width={width} height={height} viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`} style={style}>
       <AnimatedPath
         d={D}
         stroke={color}

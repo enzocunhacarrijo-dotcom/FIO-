@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import type { AnalysisHistoryItem, StressLevel } from '@hair-analysis/shared';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
 import { ChoiceChips } from '@/components/choice-chips';
 import { EvolutionChart } from '@/components/evolution-chart';
 import { ScreenHeader } from '@/components/screen-header';
+import { SectionHeader } from '@/components/section-header';
+import { Strand } from '@/components/strand';
+import { Text } from '@/components/text';
 import { getAnalysisHistory } from '@/api/analysis';
 import { getHabitEntry, setHabitEntry } from '@/api/habits';
 import { getReminderPreference, setReminderPreference, REMINDER_INTERVAL_OPTIONS } from '@/lib/reminders';
 import { todayLocalDateString } from '@/lib/date';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, motion, radii, spacing } from '@/theme/tokens';
+
+const enter = (i: number) => FadeInDown.duration(motion.duration.base).delay(i * 40);
 
 const STRESS_OPTIONS: { value: StressLevel; label: string }[] = [
   { value: 'baixo', label: 'Baixo' },
@@ -31,6 +38,7 @@ function formatFullDate(iso: string): string {
 
 export default function ProgressoScreen() {
   const accessToken = useAuthStore((s) => s.accessToken);
+  const { width: screenWidth } = useWindowDimensions();
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -90,58 +98,84 @@ export default function ProgressoScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.text} />
-      </View>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.content}>
+          <View style={[styles.skeleton, { height: 40, width: '50%' }]} />
+          <View style={[styles.skeleton, { height: 220, borderRadius: radii.lg }]} />
+          <View style={[styles.skeleton, { height: 96, borderRadius: radii.lg }]} />
+        </View>
+      </SafeAreaView>
     );
   }
+
+  const delta = history.length >= 2 ? history[0].indiceCapilar.total - history[history.length - 1].indiceCapilar.total : null;
+  const chartWidth = screenWidth - spacing.xl * 2 - spacing.md * 2;
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader title="Progresso" onBack={() => router.back()} />
 
-        <View>
-          <Text style={styles.sectionLabel}>Evolução do Índice Capilar</Text>
-          <EvolutionChart items={history} width={342} />
-        </View>
-
-        {history.length >= 2 && (
-          <Button label="Comparar duas fotos" variant="secondary" onPress={() => router.push('/progresso/comparador')} />
-        )}
+        <Animated.View entering={enter(0)} style={styles.section}>
+          <SectionHeader
+            title="Evolução do Índice Capilar"
+            action={
+              delta !== null ? (
+                <Text variant="h3" style={{ color: delta >= 0 ? colors.success : colors.dangerText }}>
+                  {delta > 0 ? '+' : ''}
+                  {delta} pts
+                </Text>
+              ) : undefined
+            }
+          />
+          <Card padding={spacing.md}>
+            <EvolutionChart items={history} width={chartWidth} />
+          </Card>
+          {history.length >= 2 && (
+            <Button label="Comparar duas fotos" variant="secondary" onPress={() => router.push('/progresso/comparador')} />
+          )}
+        </Animated.View>
 
         {history.length > 0 && (
-          <View>
-            <Text style={styles.sectionLabel}>Linha do tempo</Text>
-            <View style={styles.cardStack}>
-              {history.map((item) => (
-                <View key={item.id} style={styles.timelineCard}>
-                  <Text style={styles.timelineDate}>{formatFullDate(item.createdAt)}</Text>
-                  <Text style={styles.timelineTotal}>{item.indiceCapilar.total}/100</Text>
-                  <Text style={styles.timelineSub}>
-                    Hidratação {item.indiceCapilar.hidratacao} · Integridade {item.indiceCapilar.integridade} · Couro{' '}
-                    {item.indiceCapilar.couro} · Densidade {item.indiceCapilar.densidade}
-                  </Text>
+          <Animated.View entering={enter(1)} style={styles.section}>
+            <SectionHeader title="Linha do tempo" />
+            <View>
+              {history.map((item, i) => (
+                <View key={item.id} style={styles.timelineRow}>
+                  <View style={styles.rail}>
+                    <View style={styles.node} />
+                    {i < history.length - 1 && <View style={styles.railLine} />}
+                  </View>
+                  <Card padding={spacing.lg} style={styles.timelineCard}>
+                    <Text variant="caption" tone="muted">
+                      {formatFullDate(item.createdAt)}
+                    </Text>
+                    <Text variant="h2">{item.indiceCapilar.total}/100</Text>
+                    <Text variant="bodySm" tone="muted">
+                      Hidratação {item.indiceCapilar.hidratacao} · Integridade {item.indiceCapilar.integridade} · Couro{' '}
+                      {item.indiceCapilar.couro} · Densidade {item.indiceCapilar.densidade}
+                    </Text>
+                  </Card>
                 </View>
               ))}
             </View>
-          </View>
+          </Animated.View>
         )}
 
-        <View>
-          <Text style={styles.sectionLabel}>Registro rápido de hoje</Text>
-          <View style={styles.habitCard}>
-            <Text style={styles.habitQuestion}>Dormiu bem?</Text>
+        <Animated.View entering={enter(2)} style={styles.section}>
+          <SectionHeader title="Registro rápido de hoje" />
+          <Card style={styles.cardStack}>
+            <Text variant="label">Dormiu bem?</Text>
             <ChoiceChips options={SLEEP_OPTIONS} selected={sleepWell} onSelect={handleSleepChange} />
-            <Text style={styles.habitQuestion}>Nível de estresse</Text>
+            <Text variant="label">Nível de estresse</Text>
             <ChoiceChips options={STRESS_OPTIONS} selected={stressLevel} onSelect={handleStressChange} />
-            {habitSaving && <ActivityIndicator size="small" color={colors.textFaint} />}
-          </View>
-        </View>
+            {habitSaving && <Strand width={24} stroke={2} color={colors.textFaint} animated loop />}
+          </Card>
+        </Animated.View>
 
-        <View>
-          <Text style={styles.sectionLabel}>Lembrete de nova análise</Text>
-          <View style={styles.habitCard}>
+        <Animated.View entering={enter(3)} style={styles.section}>
+          <SectionHeader title="Lembrete de nova análise" />
+          <Card style={styles.cardStack}>
             <ChoiceChips
               options={[
                 { value: 'on', label: 'Ativado' },
@@ -156,7 +190,7 @@ export default function ProgressoScreen() {
             />
             {reminderEnabled && (
               <>
-                <Text style={styles.habitQuestion}>A cada quantos dias?</Text>
+                <Text variant="label">A cada quantos dias?</Text>
                 <ChoiceChips
                   options={INTERVAL_OPTIONS}
                   selected={reminderInterval}
@@ -167,10 +201,14 @@ export default function ProgressoScreen() {
                 />
               </>
             )}
-            {reminderSaving && <ActivityIndicator size="small" color={colors.textFaint} />}
-            {reminderError && <Text style={styles.error}>{reminderError}</Text>}
-          </View>
-        </View>
+            {reminderSaving && <Strand width={24} stroke={2} color={colors.textFaint} animated loop />}
+            {reminderError && (
+              <Text variant="bodySm" tone="danger">
+                {reminderError}
+              </Text>
+            )}
+          </Card>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -178,41 +216,18 @@ export default function ProgressoScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
-    gap: spacing.xl,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.xxl,
   },
-  sectionLabel: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: colors.textFaint,
-    marginBottom: spacing.sm,
-  },
+  skeleton: { backgroundColor: colors.surfaceSunken, borderRadius: radii.md },
+  section: { gap: spacing.lg },
   cardStack: { gap: spacing.md },
-  timelineCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: 4,
-  },
-  timelineDate: { fontFamily: fontFamily.bodySemiBold, fontSize: 13, color: colors.text },
-  timelineTotal: { fontFamily: fontFamily.displaySemiBold, fontSize: 22, color: colors.text },
-  timelineSub: { fontFamily: fontFamily.body, fontSize: 12, color: colors.textMuted },
-  habitCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  habitQuestion: { fontFamily: fontFamily.bodySemiBold, fontSize: 13, color: colors.text, marginTop: spacing.xs },
-  error: { fontFamily: fontFamily.body, fontSize: 12, color: colors.dangerText },
+  timelineRow: { flexDirection: 'row', gap: spacing.md },
+  rail: { width: 10, alignItems: 'center' },
+  node: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary, marginTop: spacing.xl },
+  railLine: { width: 2, flex: 1, backgroundColor: colors.primaryTint },
+  timelineCard: { flex: 1, gap: spacing.xxs, marginBottom: spacing.md },
 });

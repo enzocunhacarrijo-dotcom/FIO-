@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
@@ -7,7 +8,7 @@ const DEFAULT_TEXT =
   'Esta análise é informativa e não substitui avaliação de um profissional de saúde ou tricologista.';
 
 /** Aviso padrão: ícone de informação + caption em textFaint, centralizado. */
-export function Disclaimer({ children }: { children?: string }) {
+export function Disclaimer({ children }: { children?: ReactNode }) {
   return (
     <View style={styles.wrap}>
       <Icon name="info" size={16} color={colors.textFaint} />

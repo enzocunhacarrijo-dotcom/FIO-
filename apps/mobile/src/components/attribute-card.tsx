@@ -1,7 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { Confianca, Fonte } from '@hair-analysis/shared';
+import { Card } from '@/components/card';
+import { Text } from '@/components/text';
 import { confiancaLabel, label } from '@/data/analysis-labels';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, radii, spacing } from '@/theme/tokens';
 
 type AttributeCardProps = {
   title: string;
@@ -11,74 +13,53 @@ type AttributeCardProps = {
   confianca: Confianca;
 };
 
-const CONFIANCA_STYLE: Record<Confianca, { bg: string; fg: string }> = {
-  alta: { bg: colors.primaryTint, fg: colors.primaryStrong },
-  media: { bg: colors.border, fg: colors.textMuted },
-  baixa: { bg: colors.dangerTint, fg: colors.dangerText },
-};
+const DOTS: Record<Confianca, number> = { alta: 3, media: 2, baixa: 1 };
 
 export function AttributeCard({ title, value, description, fonte, confianca }: AttributeCardProps) {
-  const confiancaStyle = CONFIANCA_STYLE[confianca];
+  const filled = DOTS[confianca];
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.value}>{value}</Text>
-      {description && <Text style={styles.description}>{description}</Text>}
-      <View style={styles.tagRow}>
+    <Card padding={spacing.lg} style={styles.card}>
+      <Text variant="eyebrow" tone="faint">
+        {title}
+      </Text>
+      <Text variant="h3">{value}</Text>
+      {description && (
+        <Text variant="bodySm" tone="muted">
+          {description}
+        </Text>
+      )}
+      <View style={styles.footer}>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{label(fonte)}</Text>
+          <Text variant="caption" tone="muted">
+            {label(fonte)}
+          </Text>
         </View>
-        <View style={[styles.tag, { backgroundColor: confiancaStyle.bg, borderColor: 'transparent' }]}>
-          <Text style={[styles.tagText, { color: confiancaStyle.fg }]}>{confiancaLabel(confianca)}</Text>
+        <View
+          style={styles.dots}
+          accessible
+          accessibilityLabel={`Confiança: ${confiancaLabel(confianca)}`}
+        >
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[styles.dot, i < filled ? styles.dotOn : styles.dotOff]} />
+          ))}
         </View>
       </View>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: 6,
-  },
-  title: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: colors.textFaint,
-  },
-  value: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 16,
-    color: colors.text,
-  },
-  description: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.textMuted,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: 2,
-    flexWrap: 'wrap',
-  },
+  card: { gap: 6 },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs },
   tag: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    height: 24,
+    paddingHorizontal: 10,
     borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceSunken,
+    justifyContent: 'center',
   },
-  tagText: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
+  dots: { flexDirection: 'row', gap: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  dotOn: { backgroundColor: colors.primary },
+  dotOff: { backgroundColor: colors.surfaceSunken },
 });

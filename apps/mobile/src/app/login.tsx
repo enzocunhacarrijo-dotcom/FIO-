@@ -4,23 +4,44 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
+import { GoogleButton, OrDivider } from '@/components/google-button';
 import { ScreenHeader } from '@/components/screen-header';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
+import { friendlyAuthError, isUseGoogleError, validateEmail } from '@/lib/auth-validation';
 import { useAuthStore } from '@/store/auth';
 import { colors, spacing } from '@/theme/tokens';
 
 export default function LoginScreen() {
   const loginAccount = useAuthStore((s) => s.loginAccount);
   const busy = useAuthStore((s) => s.busy);
-  const error = useAuthStore((s) => s.error);
+  const error = friendlyAuthError(useAuthStore((s) => s.error));
+  const clearError = useAuthStore((s) => s.clearError);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [submitting, setSubmitting] = useState<'form' | 'google' | null>(null);
+  const useGoogle = isUseGoogleError(error);
 
   async function handleSubmit() {
+    clearError();
+    setEmailTouched(true);
+    if (validateEmail(email)) return;
+    setSubmitting('form');
     const ok = await loginAccount(email.trim().toLowerCase(), password);
+    setSubmitting(null);
     if (ok) router.replace('/');
+  }
+
+  async function handleGoogle() {
+    clearError();
+    setSubmitting('google');
+    const result = await signInWithGoogle();
+    setSubmitting(null);
+    if (result === 'ok') router.replace('/');
   }
 
   return (
@@ -30,10 +51,19 @@ export default function LoginScreen() {
           <ScreenHeader title="Entrar" onBack={() => router.back()} />
 
           <Animated.View entering={FadeInDown.duration(220)} style={styles.form}>
+            <GoogleButton
+              onPress={handleGoogle}
+              loading={submitting === 'google'}
+              disabled={busy && submitting !== 'google'}
+              highlight={useGoogle}
+            />
+            <OrDivider />
             <TextField
               label="E-mail"
               value={email}
               onChangeText={setEmail}
+              onBlur={() => setEmailTouched(true)}
+              error={emailTouched ? (validateEmail(email) ?? undefined) : undefined}
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
@@ -48,15 +78,23 @@ export default function LoginScreen() {
               placeholder="Sua senha"
             />
             {error && (
-              <Text variant="bodySm" tone="danger">
-                {error}
-              </Text>
+              <Card variant={useGoogle ? 'tint' : 'danger'} padding={spacing.md}>
+                <Text variant="bodySm" tone={useGoogle ? 'primary' : 'danger'} accessibilityRole="alert">
+                  {error}
+                </Text>
+              </Card>
             )}
           </Animated.View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button label="Entrar" onPress={handleSubmit} loading={busy} disabled={!email || !password} />
+          <Button
+            label="Entrar"
+            onPress={handleSubmit}
+            loading={submitting === 'form' && busy}
+            disabled={!email || !password || (busy && submitting !== 'form')}
+          />
+          <Button label="Criar uma conta" variant="ghost" size="md" onPress={() => router.replace('/register')} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -80,5 +118,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
+    gap: spacing.xs,
   },
 });

@@ -1,21 +1,27 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import type { Compatibilidade } from '@hair-analysis/shared';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
+import { Disclaimer } from '@/components/disclaimer';
+import { Icon, type IconName } from '@/components/icon';
 import { ScreenHeader } from '@/components/screen-header';
+import { SectionHeader } from '@/components/section-header';
+import { Text } from '@/components/text';
 import { useScannerStore } from '@/store/scanner';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, radii, spacing } from '@/theme/tokens';
 
 const VERDICT_LABEL: Record<Compatibilidade, string> = {
   compativel: 'Compatível',
   neutro: 'Neutro',
   evitar: 'Evitar',
 };
-const VERDICT_STYLE: Record<Compatibilidade, { bg: string; fg: string }> = {
-  compativel: { bg: colors.primaryTint, fg: colors.primaryStrong },
-  neutro: { bg: colors.border, fg: colors.textMuted },
-  evitar: { bg: colors.dangerTint, fg: colors.dangerText },
+const VERDICT_STYLE: Record<Compatibilidade, { bg: string; fg: string; dot: string; icon: IconName }> = {
+  compativel: { bg: colors.successTint, fg: colors.success, dot: colors.success, icon: 'check' },
+  neutro: { bg: colors.accentTint, fg: colors.accentStrong, dot: colors.accent, icon: 'info' },
+  evitar: { bg: colors.dangerTint, fg: colors.dangerText, dot: colors.danger, icon: 'warning' },
 };
 
 export default function ScannerResultadoScreen() {
@@ -25,7 +31,9 @@ export default function ScannerResultadoScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.error}>Nenhuma leitura encontrada.</Text>
+          <Text variant="body" tone="muted">
+            Nenhuma leitura encontrada.
+          </Text>
           <Button label="Ler outro produto" onPress={() => router.replace('/scanner')} />
         </View>
       </SafeAreaView>
@@ -40,51 +48,69 @@ export default function ScannerResultadoScreen() {
         <ScreenHeader title="Compatibilidade do produto" onBack={() => router.back()} />
 
         {!result.leituraSuficiente && (
-          <View style={styles.warnCard}>
-            <Text style={styles.warnTitle}>Não deu para ler o rótulo direito</Text>
-            {result.problemasLeitura.map((p, i) => (
-              <Text key={i} style={styles.warnBody}>
-                • {p}
+          <Animated.View entering={FadeInDown.duration(220)}>
+            <Card variant="warn">
+              <Text variant="h3" style={styles.warnText}>
+                Não deu para ler o rótulo direito
               </Text>
-            ))}
-          </View>
+              {result.problemasLeitura.map((p, i) => (
+                <Text key={i} variant="bodySm" style={styles.warnText}>
+                  • {p}
+                </Text>
+              ))}
+            </Card>
+          </Animated.View>
         )}
 
-        <View style={styles.heroCard}>
-          {result.produtoIdentificado && <Text style={styles.productName}>{result.produtoIdentificado}</Text>}
-          <View style={[styles.verdictBadge, { backgroundColor: verdictStyle.bg }]}>
-            <Text style={[styles.verdictText, { color: verdictStyle.fg }]}>{VERDICT_LABEL[result.compatibilidadeGeral]}</Text>
+        <Animated.View entering={FadeInDown.duration(220).delay(40)} style={styles.hero}>
+          <View style={[styles.seal, { backgroundColor: verdictStyle.bg }]}>
+            <Icon name={verdictStyle.icon} size={32} color={verdictStyle.fg} />
           </View>
-          <Text style={styles.summary}>{result.resumo}</Text>
-        </View>
+          {result.produtoIdentificado && (
+            <Text variant="eyebrow" tone="muted" style={styles.centerText}>
+              {result.produtoIdentificado}
+            </Text>
+          )}
+          <Text variant="h1" style={[styles.centerText, { color: verdictStyle.fg }]}>
+            {VERDICT_LABEL[result.compatibilidadeGeral]}
+          </Text>
+          <Text variant="body" tone="muted" style={styles.centerText}>
+            {result.resumo}
+          </Text>
+        </Animated.View>
 
         {result.ingredientesAvaliados.length > 0 && (
-          <>
-            <Text style={styles.sectionLabel}>Ingredientes</Text>
-            <View style={styles.cardStack}>
+          <Animated.View entering={FadeInDown.duration(220).delay(80)} style={styles.section}>
+            <SectionHeader title="Ingredientes" />
+            <Card padding={spacing.lg} style={styles.ingredients}>
               {result.ingredientesAvaliados.map((ing, i) => {
                 const style = VERDICT_STYLE[ing.avaliacao];
                 return (
-                  <View key={i} style={styles.ingredientCard}>
-                    <View style={styles.ingredientHeader}>
-                      <Text style={styles.ingredientName}>{ing.nome}</Text>
-                      <View style={[styles.tag, { backgroundColor: style.bg }]}>
-                        <Text style={[styles.tagText, { color: style.fg }]}>{VERDICT_LABEL[ing.avaliacao]}</Text>
+                  <View key={i} style={styles.ingredientRow}>
+                    <View style={[styles.dot, { backgroundColor: style.dot }]} />
+                    <View style={styles.ingredientText}>
+                      <View style={styles.ingredientHeader}>
+                        <Text variant="label" style={styles.ingredientName}>
+                          {ing.nome}
+                        </Text>
+                        <Text variant="caption" style={{ color: style.fg }}>
+                          {VERDICT_LABEL[ing.avaliacao]}
+                        </Text>
                       </View>
+                      <Text variant="bodySm" tone="muted">
+                        {ing.justificativa}
+                      </Text>
                     </View>
-                    <Text style={styles.ingredientBody}>{ing.justificativa}</Text>
                   </View>
                 );
               })}
-            </View>
-          </>
+            </Card>
+          </Animated.View>
         )}
 
         <Button label="Ler outro produto" variant="secondary" onPress={() => router.replace('/scanner')} />
 
-        <Text style={styles.disclaimer}>
-          Avaliação cosmética baseada no seu perfil declarado — não é uma recomendação médica.
-        </Text>
+        <Disclaimer>Avaliação cosmética baseada no seu perfil declarado — não é uma recomendação médica.</Disclaimer>
       </ScrollView>
     </SafeAreaView>
   );
@@ -92,104 +118,28 @@ export default function ScannerResultadoScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing.xl },
-  error: { fontFamily: fontFamily.body, fontSize: 14, color: colors.textMuted },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, paddingHorizontal: spacing.xl },
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
-    gap: spacing.lg,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.xxl,
   },
-  warnCard: {
-    backgroundColor: colors.accentTint,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: 4,
-  },
-  warnTitle: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.accentStrong },
-  warnBody: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: colors.accentStrong },
-  heroCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.xl,
-    padding: spacing.xl,
+  warnText: { color: colors.accentStrong },
+  hero: { alignItems: 'center', gap: spacing.md },
+  seal: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.pill,
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'center',
   },
-  productName: {
-    fontFamily: fontFamily.displaySemiBold,
-    fontSize: 18,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  verdictBadge: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-  },
-  verdictText: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 13,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  summary: {
-    fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  sectionLabel: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: colors.textFaint,
-  },
-  cardStack: { gap: spacing.md },
-  ingredientCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: 6,
-  },
-  ingredientHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  ingredientName: {
-    flex: 1,
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 14,
-    color: colors.text,
-  },
-  tag: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: radii.pill,
-  },
-  tagText: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 10.5,
-    textTransform: 'uppercase',
-  },
-  ingredientBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.textMuted,
-  },
-  disclaimer: {
-    fontFamily: fontFamily.body,
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.textFaint,
-    textAlign: 'center',
-  },
+  centerText: { textAlign: 'center' },
+  section: { gap: spacing.lg },
+  ingredients: { gap: spacing.lg },
+  ingredientRow: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
+  dot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
+  ingredientText: { flex: 1, gap: spacing.xs },
+  ingredientHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  ingredientName: { flex: 1 },
 });

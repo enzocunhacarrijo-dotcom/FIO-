@@ -1,20 +1,56 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@/components/button';
 import { CaptureGuide } from '@/components/capture-guide';
+import { Icon } from '@/components/icon';
+import { Strand } from '@/components/strand';
+import { Text } from '@/components/text';
 import { CAPTURE_STEPS } from '@/data/capture-steps';
 import { validateCaptureUri, type CaptureValidation } from '@/lib/capture-validation';
 import { prepareForUpload } from '@/lib/image-prep';
 import { uploadPhoto } from '@/api/photos';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, motion, radii, spacing } from '@/theme/tokens';
 
 type ReviewState = { uri: string; validation: CaptureValidation } | null;
+
+function Shutter({ onPress, disabled, busy }: { onPress: () => void; disabled: boolean; busy: boolean }) {
+  const scale = useSharedValue(1);
+  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Capturar foto"
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onPress();
+      }}
+      onPressIn={() => {
+        scale.value = withSpring(0.92, motion.spring.press);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, motion.spring.press);
+      }}
+      disabled={disabled}
+    >
+      <Animated.View style={[styles.shutterOuter, disabled && styles.shutterDisabled, animated]}>
+        {busy ? <Strand width={28} stroke={3} color={colors.text} animated loop /> : <View style={styles.shutterInner} />}
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 export default function CapturaScreen() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -96,20 +132,43 @@ export default function CapturaScreen() {
     const validation = review.validation;
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.reviewContent}>
-          <Text style={styles.stepLabel}>
-            Foto {stepIndex + 1} de {CAPTURE_STEPS.length} — {step.title}
-          </Text>
-          <Image source={{ uri: review.uri }} style={styles.reviewImage} resizeMode="cover" />
-          {!validation.ok && <Text style={styles.errorText}>{validation.message}</Text>}
-          {uploadError && <Text style={styles.errorText}>{uploadError}</Text>}
-          <View style={styles.reviewActions}>
-            {validation.ok && (
-              <Button label="Usar essa foto" onPress={handleConfirm} loading={uploading} disabled={uploading} />
-            )}
-            <Button label="Tirar de novo" variant="secondary" onPress={handleRetry} disabled={uploading} />
+        <Animated.View entering={FadeInDown.duration(220)} style={styles.reviewContent}>
+          <View style={styles.reviewHeader}>
+            <Text variant="eyebrow" tone="muted">
+              Foto {stepIndex + 1} de {CAPTURE_STEPS.length}
+            </Text>
+            <Text variant="h2">{step.title}</Text>
           </View>
-        </View>
+          <Image source={{ uri: review.uri }} style={styles.reviewImage} resizeMode="cover" />
+          {!validation.ok && (
+            <Text variant="bodySm" tone="danger">
+              {validation.message}
+            </Text>
+          )}
+          {uploadError && (
+            <Text variant="bodySm" tone="danger">
+              {uploadError}
+            </Text>
+          )}
+          <View style={styles.reviewActions}>
+            <Button
+              label="Refazer"
+              variant="secondary"
+              onPress={handleRetry}
+              disabled={uploading}
+              style={styles.actionBtn}
+            />
+            {validation.ok && (
+              <Button
+                label="Usar foto"
+                onPress={handleConfirm}
+                loading={uploading}
+                disabled={uploading}
+                style={styles.actionBtn}
+              />
+            )}
+          </View>
+        </Animated.View>
       </SafeAreaView>
     );
   }
@@ -117,7 +176,7 @@ export default function CapturaScreen() {
   if (!permission) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.text} />
+        <Strand width={48} stroke={3} color={colors.primary} animated loop />
       </View>
     );
   }
@@ -125,18 +184,25 @@ export default function CapturaScreen() {
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.permissionContent}>
-          <Text style={styles.title}>Precisamos da câmera</Text>
-          <Text style={styles.subtitle}>
+        <Animated.View entering={FadeInDown.duration(220)} style={styles.permissionContent}>
+          <View style={styles.permissionIcon}>
+            <Icon name="camera" size={24} color={colors.primaryStrong} />
+          </View>
+          <Text variant="h1">Precisamos da câmera</Text>
+          <Text variant="body" tone="muted">
             Para fotografar {step.title.toLowerCase()}, o app precisa de acesso à câmera. Você também pode enviar uma
             foto já existente da galeria.
           </Text>
-          {uploadError && <Text style={styles.errorText}>{uploadError}</Text>}
-          <View style={styles.reviewActions}>
+          {uploadError && (
+            <Text variant="bodySm" tone="danger">
+              {uploadError}
+            </Text>
+          )}
+          <View style={styles.stack}>
             <Button label="Permitir câmera" onPress={requestPermission} />
             <Button label="Usar galeria em vez disso" variant="secondary" onPress={handlePickFromGallery} />
           </View>
-        </View>
+        </Animated.View>
       </SafeAreaView>
     );
   }
@@ -154,37 +220,38 @@ export default function CapturaScreen() {
       <CaptureGuide shape={step.guideShape} caption={step.guideCaption} />
 
       <SafeAreaView style={styles.topOverlay} pointerEvents="box-none">
-        <View style={styles.instructionCard}>
-          <Text style={styles.stepLabelOnDark}>
+        <View style={styles.instructionPill}>
+          <Text variant="eyebrow" tone="onPrimary" style={styles.dim}>
             Foto {stepIndex + 1} de {CAPTURE_STEPS.length}
           </Text>
-          <Text style={styles.stepTitleOnDark}>{step.title}</Text>
-          <Text style={styles.instructionOnDark}>{step.instruction}</Text>
+          <Text variant="bodyLg" tone="onPrimary" style={styles.centerText}>
+            {step.instruction}
+          </Text>
         </View>
       </SafeAreaView>
 
       <SafeAreaView style={styles.bottomOverlay} pointerEvents="box-none">
-        {uploadError && <Text style={styles.errorTextOnDark}>{uploadError}</Text>}
+        {uploadError && (
+          <Text variant="bodySm" style={styles.errorTextOnDark}>
+            {uploadError}
+          </Text>
+        )}
         <View style={styles.captureRow}>
           <Pressable accessibilityRole="button" onPress={handlePickFromGallery} style={styles.galleryBtn}>
-            <Text style={styles.galleryBtnLabel}>Galeria</Text>
+            <Text variant="caption" tone="onPrimary">
+              Galeria
+            </Text>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Capturar foto"
-            onPress={handleCapture}
-            disabled={!cameraReady || capturing}
-            style={[styles.shutterBtn, (!cameraReady || capturing) && styles.shutterBtnDisabled]}
-          >
-            {capturing ? <ActivityIndicator color={colors.text} /> : <View style={styles.shutterInner} />}
-          </Pressable>
+          <Shutter onPress={handleCapture} disabled={!cameraReady || capturing} busy={capturing} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Trocar câmera"
             onPress={toggleFacing}
             style={styles.galleryBtn}
           >
-            <Text style={styles.galleryBtnLabel}>{facing === 'back' ? 'Selfie' : 'Traseira'}</Text>
+            <Text variant="caption" tone="onPrimary">
+              {facing === 'back' ? 'Selfie' : 'Traseira'}
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -197,63 +264,57 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   cameraRoot: { flex: 1, backgroundColor: '#000' },
 
-  permissionContent: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.lg },
-  title: { fontFamily: fontFamily.displaySemiBold, fontSize: 24, color: colors.text },
-  subtitle: { fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21, color: colors.textMuted },
-
-  topOverlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
-  instructionCard: {
-    alignSelf: 'center',
-    maxWidth: 340,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    gap: 4,
-  },
-  stepLabelOnDark: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.7)',
-  },
-  stepTitleOnDark: {
-    fontFamily: fontFamily.displayBold,
-    fontSize: 22,
-    lineHeight: 27,
-    textAlign: 'center',
-    color: '#FFFFFF',
-  },
-  instructionOnDark: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.92)',
-  },
-
-  bottomOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.md },
-  captureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  shutterBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 4,
-    borderColor: '#FFFFFF',
+  permissionContent: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.xxl },
+  permissionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shutterBtnDisabled: { opacity: 0.5 },
-  shutterInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#FFFFFF' },
-  galleryBtn: { width: 64, alignItems: 'center' },
-  galleryBtnLabel: { fontFamily: fontFamily.bodyMedium, fontSize: 12, color: '#FFFFFF' },
+  stack: { gap: spacing.md },
 
-  stepLabel: { fontFamily: fontFamily.bodySemiBold, fontSize: 12, color: colors.textMuted, marginTop: spacing.xl },
-  reviewContent: { flex: 1, paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.md },
-  reviewImage: { flex: 1, borderRadius: radii.lg, backgroundColor: colors.surface },
-  reviewActions: { gap: spacing.sm },
-  errorText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.dangerText },
-  errorTextOnDark: { fontFamily: fontFamily.body, fontSize: 13, color: '#FFD9CC', textAlign: 'center' },
+  topOverlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  instructionPill: {
+    alignSelf: 'center',
+    maxWidth: 340,
+    backgroundColor: colors.overlay,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.xs,
+  },
+  dim: { textAlign: 'center', opacity: 0.72 },
+  centerText: { textAlign: 'center' },
+
+  bottomOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  captureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  shutterOuter: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 4,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shutterDisabled: { opacity: 0.5 },
+  shutterInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#FFFFFF' },
+  galleryBtn: { width: 64, alignItems: 'center' },
+
+  reviewContent: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl, gap: spacing.lg },
+  reviewHeader: { gap: spacing.xs },
+  reviewImage: { flex: 1, borderRadius: radii.xl, backgroundColor: colors.surfaceSunken },
+  reviewActions: { flexDirection: 'row', gap: spacing.md },
+  actionBtn: { flex: 1 },
+  errorTextOnDark: { color: '#FFD9CC', textAlign: 'center' },
 });

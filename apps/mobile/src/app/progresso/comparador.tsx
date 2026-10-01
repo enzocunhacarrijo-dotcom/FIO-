@@ -1,21 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  PanResponder,
-  StyleSheet,
-  Text,
-  View,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { Image, PanResponder, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import type { PhotoKind, PhotoRecord } from '@hair-analysis/shared';
+import { Card } from '@/components/card';
+import { Icon } from '@/components/icon';
 import { ScreenHeader } from '@/components/screen-header';
+import { Text } from '@/components/text';
 import { ChoiceChips } from '@/components/choice-chips';
 import { getPhotoHistory } from '@/api/photos';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, elevation, radii, spacing } from '@/theme/tokens';
 
 const KIND_OPTIONS: { value: PhotoKind; label: string }[] = [
   { value: 'comprimento', label: 'Comprimento' },
@@ -84,14 +80,22 @@ export default function ComparadorScreen() {
 
         <ChoiceChips options={KIND_OPTIONS} selected={kind} onSelect={setKind} />
 
-        {loading && <ActivityIndicator color={colors.text} />}
+        {loading && (
+          <View style={styles.loader}>
+            <View style={[styles.skeleton, { height: IMAGE_HEIGHT }]} />
+          </View>
+        )}
 
         {!loading && photos.length < 2 && (
-          <Text style={styles.empty}>Ainda não há duas fotos desse tipo em datas diferentes para comparar.</Text>
+          <Card variant="sunken">
+            <Text variant="body" tone="muted">
+              Ainda não há duas fotos desse tipo em datas diferentes para comparar.
+            </Text>
+          </Card>
         )}
 
         {!loading && photos.length >= 2 && before && after && beforeUri && afterUri && (
-          <>
+          <Animated.View entering={FadeInDown.duration(220)} style={styles.compareWrap}>
             <View style={styles.compareContainer} onLayout={handleLayout} {...panResponder.panHandlers}>
               <Image source={{ uri: afterUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
               <View style={[styles.clip, { width: sliderX }]}>
@@ -102,21 +106,30 @@ export default function ComparadorScreen() {
                 />
               </View>
               <View style={[styles.handleLine, { left: sliderX - 1 }]} />
-              <View style={[styles.handleGrip, { left: sliderX - 18 }]}>
-                <Text style={styles.handleGlyph}>‹ ›</Text>
+              <View style={[styles.handleGrip, { left: sliderX - 18 }, elevation('md')]}>
+                <Icon name="chevron.left" size={12} color={colors.text} />
+                <Icon name="chevron.right" size={12} color={colors.text} />
               </View>
               <View style={styles.badgeLeft}>
-                <Text style={styles.badgeText}>{formatDate(before.createdAt)}</Text>
+                <Text variant="caption" tone="onPrimary">
+                  {formatDate(before.createdAt)}
+                </Text>
               </View>
               <View style={styles.badgeRight}>
-                <Text style={styles.badgeText}>{formatDate(after.createdAt)}</Text>
+                <Text variant="caption" tone="onPrimary">
+                  {formatDate(after.createdAt)}
+                </Text>
               </View>
             </View>
-            <Text style={styles.hint}>Arraste a divisória para comparar. Escolha as datas abaixo.</Text>
+            <Text variant="caption" tone="faint">
+              Arraste a divisória para comparar. Escolha as datas abaixo.
+            </Text>
 
             <View style={styles.pickerRow}>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Antes</Text>
+                <Text variant="label" tone="muted">
+                  Antes
+                </Text>
                 <ChoiceChips
                   options={photos.map((p, i) => ({ value: String(i), label: formatDate(p.createdAt) }))}
                   selected={String(beforeIdx)}
@@ -124,7 +137,9 @@ export default function ComparadorScreen() {
                 />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Depois</Text>
+                <Text variant="label" tone="muted">
+                  Depois
+                </Text>
                 <ChoiceChips
                   options={photos.map((p, i) => ({ value: String(i), label: formatDate(p.createdAt) }))}
                   selected={String(afterIdx)}
@@ -132,7 +147,7 @@ export default function ComparadorScreen() {
                 />
               </View>
             </View>
-          </>
+          </Animated.View>
         )}
       </View>
     </SafeAreaView>
@@ -143,13 +158,15 @@ const IMAGE_HEIGHT = 420;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm, gap: spacing.lg },
-  empty: { fontFamily: fontFamily.body, fontSize: 13, color: colors.textMuted },
+  content: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm, gap: spacing.xxl },
+  loader: { gap: spacing.lg },
+  skeleton: { backgroundColor: colors.surfaceSunken, borderRadius: radii.lg },
+  compareWrap: { gap: spacing.lg },
   compareContainer: {
     height: IMAGE_HEIGHT,
     borderRadius: radii.lg,
     overflow: 'hidden',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSunken,
   },
   clip: {
     position: 'absolute',
@@ -176,31 +193,28 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  handleGlyph: { fontSize: 12, color: colors.text },
   badgeLeft: {
     position: 'absolute',
     left: spacing.sm,
     bottom: spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: colors.overlay,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     borderRadius: radii.pill,
   },
   badgeRight: {
     position: 'absolute',
     right: spacing.sm,
     bottom: spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: colors.overlay,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     borderRadius: radii.pill,
   },
-  badgeText: { fontFamily: fontFamily.bodySemiBold, fontSize: 11, color: '#FFFFFF' },
-  hint: { fontFamily: fontFamily.body, fontSize: 12, color: colors.textFaint },
   pickerRow: { gap: spacing.lg },
   pickerCol: { gap: spacing.sm },
-  pickerLabel: { fontFamily: fontFamily.bodySemiBold, fontSize: 12, color: colors.textMuted },
 });

@@ -1,5 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { Pressable, StyleSheet, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { CheckBox } from '@/components/checkbox';
+import { Icon, type IconName } from '@/components/icon';
+import { Text } from '@/components/text';
+import { colors, elevation, motion, radii, spacing } from '@/theme/tokens';
 
 type OptionCardProps = {
   label: string;
@@ -7,29 +12,55 @@ type OptionCardProps = {
   selected: boolean;
   onPress: () => void;
   mode: 'single' | 'multi';
+  icon?: IconName;
 };
 
-export function OptionCard({ label, description, selected, onPress, mode }: OptionCardProps) {
+export function OptionCard({ label, description, selected, onPress, mode, icon }: OptionCardProps) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const dot = useAnimatedStyle(() => ({
+    transform: [{ scale: withSpring(selected ? 1 : 0, motion.spring.pop) }],
+  }));
+
   return (
     <Pressable
       accessibilityRole={mode === 'single' ? 'radio' : 'checkbox'}
       accessibilityState={{ selected, checked: selected }}
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, selected && styles.cardSelected, pressed && styles.pressed]}
+      onPressIn={() => {
+        scale.value = withSpring(motion.pressScale, motion.spring.press);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, motion.spring.press);
+      }}
+      onPress={() => {
+        Haptics.selectionAsync().catch(() => {});
+        onPress();
+      }}
     >
-      <View style={styles.textCol}>
-        <Text style={styles.label}>{label}</Text>
-        {description && <Text style={styles.description}>{description}</Text>}
-      </View>
-      {mode === 'single' ? (
-        <View style={[styles.radio, selected && styles.radioSelected]}>
-          {selected && <View style={styles.radioDot} />}
+      <Animated.View style={[styles.card, selected ? styles.cardSelected : elevation('sm'), animStyle]}>
+        {icon && (
+          <View style={styles.iconCircle}>
+            <Icon name={icon} size={20} color={colors.primary} />
+          </View>
+        )}
+        <View style={styles.textCol}>
+          <Text variant="label" style={styles.label}>
+            {label}
+          </Text>
+          {description && (
+            <Text variant="bodySm" tone="muted">
+              {description}
+            </Text>
+          )}
         </View>
-      ) : (
-        <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-          {selected && <Text style={styles.checkmark}>✓</Text>}
-        </View>
-      )}
+        {mode === 'single' ? (
+          <View style={[styles.radio, selected && styles.radioSelected]}>
+            <Animated.View style={[styles.radioDot, dot]} />
+          </View>
+        ) : (
+          <CheckBox checked={selected} />
+        )}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -38,72 +69,36 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.md,
     backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    borderRadius: 20,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
-    minHeight: 56,
+    minHeight: 60,
   },
-  cardSelected: {
+  cardSelected: { backgroundColor: colors.primaryTint, borderColor: colors.primary },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
     backgroundColor: colors.primaryTint,
-    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  pressed: {
-    opacity: 0.85,
-  },
-  textCol: {
-    flex: 1,
-    gap: 3,
-  },
-  label: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: 15,
-    color: colors.text,
-  },
-  description: {
-    fontFamily: fontFamily.body,
-    fontSize: 12.5,
-    lineHeight: 17,
-    color: colors.textMuted,
-  },
+  textCol: { flex: 1, gap: 2 },
+  label: { fontSize: 15, lineHeight: 20 },
   radio: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     borderRadius: radii.pill,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.borderStrong,
-  },
-  radioSelected: {
-    borderColor: colors.primary,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioDot: {
-    width: 11,
-    height: 11,
-    borderRadius: radii.pill,
-    backgroundColor: colors.primary,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  checkmark: {
-    color: colors.onPrimary,
-    fontSize: 13,
-    fontFamily: fontFamily.bodySemiBold,
-  },
+  radioSelected: { borderColor: colors.primary },
+  radioDot: { width: 12, height: 12, borderRadius: radii.pill, backgroundColor: colors.primary },
 });

@@ -7,19 +7,32 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Checkbox } from '@/components/checkbox';
 import { Disclaimer } from '@/components/disclaimer';
+import { GoogleButton } from '@/components/google-button';
 import { Logo } from '@/components/logo';
 import { Strand } from '@/components/strand';
 import { Text } from '@/components/text';
+import { friendlyAuthError } from '@/lib/auth-validation';
 import { useAuthStore } from '@/store/auth';
 import { colors, radii, spacing } from '@/theme/tokens';
 
 export default function WelcomeScreen() {
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
   const busy = useAuthStore((s) => s.busy);
-  const error = useAuthStore((s) => s.error);
+  const error = friendlyAuthError(useAuthStore((s) => s.error));
   const lgpdConsented = useAuthStore((s) => s.lgpdConsented);
   const setLgpdConsented = useAuthStore((s) => s.setLgpdConsented);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
+  const clearError = useAuthStore((s) => s.clearError);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
+
+  async function handleGoogle() {
+    clearError();
+    setGoogleLoading(true);
+    const result = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (result === 'ok') router.replace('/');
+  }
 
   async function handleGuest() {
     setGuestLoading(true);
@@ -52,9 +65,11 @@ export default function WelcomeScreen() {
         <SafeAreaView edges={['bottom']} style={styles.actionsSafe}>
           <Animated.View entering={FadeInDown.duration(220).delay(40)} style={styles.actions}>
             {error && (
-              <Text variant="bodySm" tone="danger">
-                {error}
-              </Text>
+              <Card variant="danger" padding={spacing.md}>
+                <Text variant="bodySm" tone="danger" accessibilityRole="alert">
+                  {error}
+                </Text>
+              </Card>
             )}
 
             <Card variant="sunken">
@@ -67,6 +82,11 @@ export default function WelcomeScreen() {
 
             <View style={styles.buttons}>
               <Button label="Criar conta" onPress={() => router.push('/register')} disabled={busy || !lgpdConsented} />
+              <GoogleButton
+                onPress={handleGoogle}
+                loading={googleLoading}
+                disabled={(busy && !googleLoading) || !lgpdConsented}
+              />
               <Button
                 label="Já tenho conta"
                 variant="secondary"

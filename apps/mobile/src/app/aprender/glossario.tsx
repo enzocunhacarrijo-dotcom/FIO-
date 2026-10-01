@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
+import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
+import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { GLOSSARIO } from '@/data/glossario';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, motion, spacing } from '@/theme/tokens';
 
 export default function GlossarioScreen() {
   const [query, setQuery] = useState('');
@@ -32,14 +35,23 @@ export default function GlossarioScreen() {
         />
 
         {filtered.length === 0 ? (
-          <Text style={styles.empty}>Nenhum termo encontrado para "{query}".</Text>
+          <Text variant="body" tone="muted" style={styles.empty}>
+            Nenhum termo encontrado para "{query}".
+          </Text>
         ) : (
           <View style={styles.list}>
-            {filtered.map((item) => (
-              <View key={item.slug} style={styles.card}>
-                <Text style={styles.termo}>{item.termo}</Text>
-                <Text style={styles.definicao}>{item.definicao}</Text>
-              </View>
+            {filtered.map((item, i) => (
+              <Animated.View
+                key={item.slug}
+                entering={FadeInDown.duration(motion.duration.base).delay(Math.min(i, 8) * 40)}
+              >
+                <Card padding={spacing.lg}>
+                  <Text variant="h3">{item.termo}</Text>
+                  <Text variant="body" tone="muted" style={styles.definicao}>
+                    {item.definicao}
+                  </Text>
+                </Card>
+              </Animated.View>
             ))}
           </View>
         )}
@@ -50,17 +62,8 @@ export default function GlossarioScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.lg },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxxl, gap: spacing.xxl },
   list: { gap: spacing.md },
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: 4,
-  },
-  termo: { fontFamily: fontFamily.bodySemiBold, fontSize: 14.5, color: colors.text },
-  definicao: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: colors.textMuted },
-  empty: { fontFamily: fontFamily.body, fontSize: 13, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl },
+  definicao: { marginTop: spacing.xs },
+  empty: { textAlign: 'center', marginTop: spacing.xl },
 });

@@ -1,5 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fontFamily, radii } from '@/theme/tokens';
+import { Pressable, StyleSheet, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { Icon } from '@/components/icon';
+import { Text } from '@/components/text';
+import { colors, motion, radii } from '@/theme/tokens';
 
 type CheckboxProps = {
   checked: boolean;
@@ -7,52 +11,52 @@ type CheckboxProps = {
   label: string;
 };
 
+/** Caixa de 24px (raio 8) com ✓ que "pula" ao marcar. Reutilizada por OptionCard. */
+export function CheckBox({ checked, size = 24 }: { checked: boolean; size?: number }) {
+  const pop = useAnimatedStyle(() => ({
+    opacity: withSpring(checked ? 1 : 0, motion.spring.press),
+    transform: [{ scale: withSpring(checked ? 1 : 0.4, motion.spring.pop) }],
+  }));
+  return (
+    <View style={[styles.box, { width: size, height: size }, checked && styles.boxChecked]}>
+      <Animated.View style={pop}>
+        <Icon name="check" size={size - 8} color={colors.onPrimary} />
+      </Animated.View>
+    </View>
+  );
+}
+
 export function Checkbox({ checked, onToggle, label }: CheckboxProps) {
   return (
     <Pressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
-      onPress={() => onToggle(!checked)}
+      onPress={() => {
+        Haptics.selectionAsync().catch(() => {});
+        onToggle(!checked);
+      }}
       style={styles.row}
       hitSlop={8}
     >
-      <View style={[styles.box, checked && styles.boxChecked]}>{checked && <Text style={styles.check}>✓</Text>}</View>
-      <Text style={styles.label}>{label}</Text>
+      <CheckBox checked={checked} />
+      <Text variant="bodySm" tone="muted" style={styles.label}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    minHeight: 44,
-  },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, minHeight: 44 },
   box: {
-    width: 22,
-    height: 22,
-    borderRadius: radii.sm / 2,
-    borderWidth: 1.5,
+    borderRadius: radii.xs,
+    borderWidth: 2,
     borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 1,
   },
-  boxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  check: {
-    color: colors.onPrimary,
-    fontSize: 13,
-    fontFamily: fontFamily.bodySemiBold,
-  },
-  label: {
-    flex: 1,
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.textMuted,
-  },
+  boxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  label: { flex: 1 },
 });

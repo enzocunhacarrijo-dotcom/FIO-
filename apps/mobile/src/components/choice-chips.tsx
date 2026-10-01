@@ -1,5 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { Pressable, StyleSheet, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Icon } from '@/components/icon';
+import { Text } from '@/components/text';
+import { colors, elevation, motion, radii, spacing } from '@/theme/tokens';
 
 type ChoiceChipsProps<T extends string> = {
   options: { value: T; label: string }[];
@@ -7,23 +11,36 @@ type ChoiceChipsProps<T extends string> = {
   onSelect: (value: T) => void;
 };
 
+function Chip({ label, isSelected, onPress }: { label: string; isSelected: boolean; onPress: () => void }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSelected }}
+      onPress={() => {
+        scale.value = 0.92;
+        scale.value = withSpring(1, motion.spring.pop);
+        Haptics.selectionAsync().catch(() => {});
+        onPress();
+      }}
+    >
+      <Animated.View style={[styles.chip, isSelected ? styles.chipSelected : [styles.chipIdle, elevation('sm')], animStyle]}>
+        {isSelected && <Icon name="check" size={14} color={colors.onPrimary} />}
+        <Text variant="label" style={{ color: isSelected ? colors.onPrimary : colors.textMuted }}>
+          {label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export function ChoiceChips<T extends string>({ options, selected, onSelect }: ChoiceChipsProps<T>) {
   return (
     <View style={styles.row}>
-      {options.map((opt) => {
-        const isSelected = opt.value === selected;
-        return (
-          <Pressable
-            key={opt.value}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isSelected }}
-            onPress={() => onSelect(opt.value)}
-            style={[styles.chip, isSelected && styles.chipSelected]}
-          >
-            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{opt.label}</Text>
-          </Pressable>
-        );
-      })}
+      {options.map((opt) => (
+        <Chip key={opt.value} label={opt.label} isSelected={opt.value === selected} onPress={() => onSelect(opt.value)} />
+      ))}
     </View>
   );
 }
@@ -31,25 +48,13 @@ export function ChoiceChips<T extends string>({ options, selected, onSelect }: C
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   chip: {
-    minHeight: 44,
+    height: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
     borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
   },
-  chipSelected: {
-    backgroundColor: colors.primaryTint,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: 13,
-    color: colors.textMuted,
-  },
-  chipTextSelected: {
-    color: colors.primaryStrong,
-    fontFamily: fontFamily.bodySemiBold,
-  },
+  chipIdle: { backgroundColor: colors.surface },
+  chipSelected: { backgroundColor: colors.primary },
 });

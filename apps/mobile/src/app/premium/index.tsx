@@ -1,17 +1,27 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
+import { Disclaimer } from '@/components/disclaimer';
+import { Icon } from '@/components/icon';
+import { ListRow } from '@/components/list-row';
 import { ScreenHeader } from '@/components/screen-header';
+import { SectionHeader } from '@/components/section-header';
+import { Strand } from '@/components/strand';
+import { Text } from '@/components/text';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, elevation, motion, radii, spacing } from '@/theme/tokens';
 
 const BENEFITS = [
   'Análises e leituras de produto sem limite diário',
   'Comparador de progresso com histórico completo',
   'Acesso antecipado a novos artigos do Aprender',
 ];
+
+const enter = (i: number) => FadeInDown.duration(motion.duration.base).delay(i * 40);
 
 export default function PremiumScreen() {
   const user = useAuthStore((s) => s.user);
@@ -27,78 +37,100 @@ export default function PremiumScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader title="Premium" onBack={() => router.back()} />
-
-        <View style={styles.statusCard}>
-          <Text style={styles.statusLabel}>Seu plano</Text>
-          <Text style={styles.statusValue}>{isPremium ? 'Premium' : 'Gratuito'}</Text>
-          {!isPremium && (
-            <Text style={styles.statusSub}>Hoje: 3 análises e 5 leituras de produto por dia.</Text>
-          )}
+    <View style={styles.root}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          <View style={styles.strandDeco} pointerEvents="none">
+            <Strand width={220} stroke={10} color={colors.accent} />
+          </View>
+          <SafeAreaView edges={['top']}>
+            <View style={styles.heroInner}>
+              <ScreenHeader title="Premium" onBack={() => router.back()} variant="onPrimary" />
+              <Animated.View entering={enter(0)} style={styles.plan}>
+                <Text variant="eyebrow" tone="onPrimary" style={styles.dim}>
+                  Seu plano
+                </Text>
+                <Text variant="display" tone="onPrimary">
+                  {isPremium ? 'Premium' : 'Gratuito'}
+                </Text>
+                {!isPremium && (
+                  <Text variant="body" tone="onPrimary" style={styles.dim}>
+                    Hoje: 3 análises e 5 leituras de produto por dia.
+                  </Text>
+                )}
+              </Animated.View>
+            </View>
+          </SafeAreaView>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>O que o Premium desbloqueia</Text>
-          {BENEFITS.map((benefit) => (
-            <Text key={benefit} style={styles.benefit}>
-              · {benefit}
-            </Text>
-          ))}
-        </View>
+        <View style={styles.content}>
+          <Animated.View entering={enter(1)} style={styles.section}>
+            <SectionHeader title="O que o Premium desbloqueia" />
+            <Card padding={spacing.sm}>
+              {BENEFITS.map((benefit) => (
+                <ListRow key={benefit} icon="check" title={benefit} hideChevron />
+              ))}
+            </Card>
+          </Animated.View>
 
-        <Button
-          label={isPremium ? 'Cancelar Premium' : 'Ativar Premium'}
-          variant={isPremium ? 'secondary' : 'primary'}
-          onPress={handleToggle}
-          loading={busy}
-        />
-        <Text style={styles.disclaimer}>
-          Protótipo de validação — este botão só alterna a flag internamente, sem cobrança real. Usamos essa tela
-          para entender se as pessoas pagariam por isso.
-        </Text>
+          <Animated.View entering={enter(2)} style={styles.section}>
+            {isPremium ? (
+              <Button label="Cancelar Premium" variant="secondary" onPress={handleToggle} loading={busy} />
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleToggle}
+                disabled={busy}
+                style={({ pressed }) => [styles.cta, elevation('md'), pressed && styles.ctaPressed]}
+              >
+                {busy ? (
+                  <ActivityIndicator color={colors.text} />
+                ) : (
+                  <>
+                    <Text variant="h3" style={styles.ctaLabel}>
+                      Ativar Premium
+                    </Text>
+                    <Icon name="arrow.right" size={20} color={colors.text} />
+                  </>
+                )}
+              </Pressable>
+            )}
+            <Disclaimer>
+              Protótipo de validação — este botão só alterna a flag internamente, sem cobrança real. Usamos essa tela
+              para entender se as pessoas pagariam por isso.
+            </Disclaimer>
+          </Animated.View>
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.lg },
-  statusCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.xl,
-    padding: spacing.xl,
+  root: { flex: 1, backgroundColor: colors.bg },
+  scroll: { paddingBottom: spacing.xxxl },
+  hero: {
+    backgroundColor: colors.primaryDeep,
+    borderBottomLeftRadius: radii.xxl,
+    borderBottomRightRadius: radii.xxl,
+    overflow: 'hidden',
+  },
+  strandDeco: { position: 'absolute', right: -30, top: 70, opacity: 0.9 },
+  heroInner: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxxl, gap: spacing.xxl },
+  plan: { gap: spacing.sm },
+  dim: { opacity: 0.72 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, gap: spacing.xxl },
+  section: { gap: spacing.lg },
+  cta: {
+    minHeight: 56,
+    borderRadius: radii.pill,
+    backgroundColor: colors.accent,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  statusLabel: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: colors.textFaint,
-  },
-  statusValue: { fontFamily: fontFamily.displaySemiBold, fontSize: 28, color: colors.text },
-  statusSub: { fontFamily: fontFamily.body, fontSize: 12, color: colors.textMuted, marginTop: 4 },
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
+    justifyContent: 'center',
     gap: spacing.sm,
+    paddingHorizontal: spacing.xxl,
   },
-  cardTitle: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.text },
-  benefit: { fontFamily: fontFamily.body, fontSize: 13.5, lineHeight: 21, color: colors.textMuted },
-  disclaimer: {
-    fontFamily: fontFamily.body,
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.textFaint,
-    textAlign: 'center',
-  },
+  ctaPressed: { opacity: 0.88 },
+  ctaLabel: { color: colors.text },
 });

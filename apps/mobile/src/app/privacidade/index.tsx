@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
+import { ListRow } from '@/components/list-row';
 import { ScreenHeader } from '@/components/screen-header';
+import { SectionHeader } from '@/components/section-header';
+import { Text } from '@/components/text';
 import { exportMyData, deleteMyAccount } from '@/api/auth';
 import { exportAndShare } from '@/lib/export-data';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, motion, spacing } from '@/theme/tokens';
+
+const enter = (i: number) => FadeInDown.duration(motion.duration.base).delay(i * 40);
 
 export default function PrivacidadeScreen() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -54,44 +61,72 @@ export default function PrivacidadeScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader title="Privacidade" onBack={() => router.back()} />
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>O que guardamos</Text>
-          <Text style={styles.body}>
-            Suas três fotos de captura, as respostas do questionário, o histórico de análises e leituras de produto, e
-            seus registros de sono/estresse — tudo associado só à sua conta (ou a este dispositivo, no modo sem
-            conta). Usamos isso exclusivamente para gerar sua análise e sua rotina, nunca para outro fim.
-          </Text>
-        </View>
+        <Animated.View entering={enter(0)} style={styles.section}>
+          <SectionHeader title="O que guardamos" />
+          <Card variant="tint">
+            <Text variant="body">
+              Suas três fotos de captura, as respostas do questionário, o histórico de análises e leituras de
+              produto, e seus registros de sono/estresse — tudo associado só à sua conta (ou a este dispositivo, no
+              modo sem conta). Usamos isso exclusivamente para gerar sua análise e sua rotina, nunca para outro fim.
+            </Text>
+          </Card>
+        </Animated.View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Exportar meus dados</Text>
-          <Text style={styles.body}>Baixe uma cópia de tudo que guardamos sobre você em um arquivo JSON.</Text>
-          {exportError && <Text style={styles.error}>{exportError}</Text>}
-          <Button label="Exportar meus dados" variant="secondary" onPress={handleExport} loading={exporting} />
-        </View>
+        <Animated.View entering={enter(1)} style={styles.section}>
+          <SectionHeader title="Exportar meus dados" />
+          <Card style={styles.cardStack}>
+            <Text variant="body" tone="muted">
+              Baixe uma cópia de tudo que guardamos sobre você em um arquivo JSON.
+            </Text>
+            {exportError && (
+              <Text variant="bodySm" tone="danger">
+                {exportError}
+              </Text>
+            )}
+            <Button label="Exportar meus dados" variant="secondary" onPress={handleExport} loading={exporting} />
+          </Card>
+        </Animated.View>
 
-        <View style={[styles.card, styles.dangerCard]}>
-          <Text style={styles.cardTitle}>Excluir minha conta</Text>
-          <Text style={styles.body}>
-            Remove permanentemente sua conta, fotos, análises e histórico. Essa ação não pode ser desfeita.
-          </Text>
-          {deleteError && <Text style={styles.error}>{deleteError}</Text>}
-
+        <Animated.View entering={enter(2)} style={styles.section}>
+          <SectionHeader title="Excluir minha conta" />
           {!confirmingDelete ? (
-            <Button label="Excluir minha conta" variant="secondary" onPress={() => setConfirmingDelete(true)} />
+            <Card padding={spacing.sm}>
+              <ListRow
+                icon="warning"
+                title="Excluir minha conta"
+                subtitle="Remove permanentemente sua conta, fotos, análises e histórico."
+                tone="danger"
+                onPress={() => setConfirmingDelete(true)}
+              />
+            </Card>
           ) : (
-            <View style={styles.confirmRow}>
-              {deleting ? (
-                <ActivityIndicator color={colors.dangerText} />
-              ) : (
-                <>
-                  <Button label="Cancelar" variant="secondary" onPress={() => setConfirmingDelete(false)} style={styles.confirmBtn} />
-                  <Button label="Sim, excluir tudo" onPress={handleDelete} style={styles.confirmBtn} />
-                </>
+            <Card variant="danger" style={styles.cardStack}>
+              <Text variant="body" tone="danger">
+                Remove permanentemente sua conta, fotos, análises e histórico. Essa ação não pode ser desfeita.
+              </Text>
+              {deleteError && (
+                <Text variant="bodySm" tone="danger">
+                  {deleteError}
+                </Text>
               )}
-            </View>
+              <View style={styles.confirmRow}>
+                <Button
+                  label="Cancelar"
+                  variant="secondary"
+                  onPress={() => setConfirmingDelete(false)}
+                  disabled={deleting}
+                  style={styles.confirmBtn}
+                />
+                <Button label="Sim, excluir tudo" onPress={handleDelete} loading={deleting} style={styles.confirmBtn} />
+              </View>
+            </Card>
           )}
-        </View>
+          {!confirmingDelete && deleteError && (
+            <Text variant="bodySm" tone="danger">
+              {deleteError}
+            </Text>
+          )}
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -99,21 +134,9 @@ export default function PrivacidadeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.lg },
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  dangerCard: {
-    borderColor: colors.dangerTint,
-  },
-  cardTitle: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.text },
-  body: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: colors.textMuted },
-  error: { fontFamily: fontFamily.body, fontSize: 12, color: colors.dangerText },
-  confirmRow: { flexDirection: 'row', gap: spacing.sm },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxxl, gap: spacing.xxl },
+  section: { gap: spacing.lg },
+  cardStack: { gap: spacing.md },
+  confirmRow: { flexDirection: 'row', gap: spacing.md },
   confirmBtn: { flex: 1 },
 });

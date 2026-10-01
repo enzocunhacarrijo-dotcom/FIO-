@@ -1,24 +1,107 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  Easing,
+  FadeInDown,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import Svg, { Path, Rect } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@/components/button';
 import { ScreenHeader } from '@/components/screen-header';
+import { Strand } from '@/components/strand';
+import { Text } from '@/components/text';
 import { validateCaptureUri, type CaptureValidation } from '@/lib/capture-validation';
 import { prepareForUpload } from '@/lib/image-prep';
 import { scanProduct } from '@/api/scanner';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/store/auth';
 import { useScannerStore } from '@/store/scanner';
-import { colors, fontFamily, radii, spacing } from '@/theme/tokens';
+import { colors, motion, radii, spacing } from '@/theme/tokens';
 
 type ReviewState = { uri: string; validation: CaptureValidation } | null;
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+const GUIDE_H = 220;
+const CORNER = 28;
+
+// Retângulo guia com cantos em L e contorno tracejado "marchando".
+function LabelGuide({ width }: { width: number }) {
+  const offset = useSharedValue(0);
+  useEffect(() => {
+    offset.value = withRepeat(withTiming(-24, { duration: 1200, easing: Easing.linear }), -1);
+  }, [offset]);
+  const animatedProps = useAnimatedProps(() => ({ strokeDashoffset: offset.value }));
+  const w = width;
+  const h = GUIDE_H;
+  const r = radii.lg;
+  return (
+    <Svg width={w} height={h}>
+      <AnimatedRect
+        x={1.5}
+        y={1.5}
+        width={w - 3}
+        height={h - 3}
+        rx={r}
+        stroke="rgba(255,255,255,0.55)"
+        strokeWidth={3}
+        strokeDasharray="12 12"
+        fill="none"
+        animatedProps={animatedProps}
+      />
+      {[
+        `M 1.5 ${CORNER + r} L 1.5 ${r} Q 1.5 1.5 ${r} 1.5 L ${CORNER + r} 1.5`,
+        `M ${w - CORNER - r} 1.5 L ${w - r} 1.5 Q ${w - 1.5} 1.5 ${w - 1.5} ${r} L ${w - 1.5} ${CORNER + r}`,
+        `M ${w - 1.5} ${h - CORNER - r} L ${w - 1.5} ${h - r} Q ${w - 1.5} ${h - 1.5} ${w - r} ${h - 1.5} L ${w - CORNER - r} ${h - 1.5}`,
+        `M ${CORNER + r} ${h - 1.5} L ${r} ${h - 1.5} Q 1.5 ${h - 1.5} 1.5 ${h - r} L 1.5 ${h - CORNER - r}`,
+      ].map((d) => (
+        <Path key={d} d={d} stroke="#FFFFFF" strokeWidth={4} strokeLinecap="round" fill="none" />
+      ))}
+    </Svg>
+  );
+}
+
+function Shutter({ onPress, disabled, busy }: { onPress: () => void; disabled: boolean; busy: boolean }) {
+  const scale = useSharedValue(1);
+  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Capturar foto"
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onPress();
+      }}
+      onPressIn={() => {
+        scale.value = withSpring(0.92, motion.spring.press);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, motion.spring.press);
+      }}
+      disabled={disabled}
+    >
+      <Animated.View style={[styles.shutterOuter, disabled && styles.shutterDisabled, animated]}>
+        {busy ? <Strand width={28} stroke={3} color={colors.text} animated loop /> : <View style={styles.shutterInner} />}
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 export default function ScannerCaptureScreen() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const setLastResult = useScannerStore((s) => s.setLastResult);
+  const { width: screenWidth } = useWindowDimensions();
+  const guideWidth = Math.round(screenWidth * 0.78);
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
@@ -82,18 +165,38 @@ export default function ScannerCaptureScreen() {
     const validation = review.validation;
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.reviewContent}>
+        <Animated.View entering={FadeInDown.duration(220)} style={styles.reviewContent}>
           <ScreenHeader title="Ler produto" onBack={() => router.back()} />
           <Image source={{ uri: review.uri }} style={styles.reviewImage} resizeMode="cover" />
-          {!validation.ok && <Text style={styles.errorText}>{validation.message}</Text>}
-          {uploadError && <Text style={styles.errorText}>{uploadError}</Text>}
+          {!validation.ok && (
+            <Text variant="bodySm" tone="danger">
+              {validation.message}
+            </Text>
+          )}
+          {uploadError && (
+            <Text variant="bodySm" tone="danger">
+              {uploadError}
+            </Text>
+          )}
           <View style={styles.reviewActions}>
+            <Button
+              label="Tirar de novo"
+              variant="secondary"
+              onPress={handleRetry}
+              disabled={uploading}
+              style={styles.actionBtn}
+            />
             {validation.ok && (
-              <Button label="Avaliar este produto" onPress={handleConfirm} loading={uploading} disabled={uploading} />
+              <Button
+                label="Avaliar produto"
+                onPress={handleConfirm}
+                loading={uploading}
+                disabled={uploading}
+                style={styles.actionBtn}
+              />
             )}
-            <Button label="Tirar de novo" variant="secondary" onPress={handleRetry} disabled={uploading} />
           </View>
-        </View>
+        </Animated.View>
       </SafeAreaView>
     );
   }
@@ -101,7 +204,7 @@ export default function ScannerCaptureScreen() {
   if (!permission) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.text} />
+        <Strand width={48} stroke={3} color={colors.primary} animated loop />
       </View>
     );
   }
@@ -109,18 +212,22 @@ export default function ScannerCaptureScreen() {
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.permissionContent}>
+        <Animated.View entering={FadeInDown.duration(220)} style={styles.permissionContent}>
           <ScreenHeader title="Ler produto" onBack={() => router.back()} />
-          <Text style={styles.subtitle}>
+          <Text variant="body" tone="muted">
             Para ler o rótulo, o app precisa de acesso à câmera. Você também pode enviar uma foto já existente da
             galeria.
           </Text>
-          {uploadError && <Text style={styles.errorText}>{uploadError}</Text>}
-          <View style={styles.reviewActions}>
+          {uploadError && (
+            <Text variant="bodySm" tone="danger">
+              {uploadError}
+            </Text>
+          )}
+          <View style={styles.stack}>
             <Button label="Permitir câmera" onPress={requestPermission} />
             <Button label="Usar galeria em vez disso" variant="secondary" onPress={handlePickFromGallery} />
           </View>
-        </View>
+        </Animated.View>
       </SafeAreaView>
     );
   }
@@ -135,31 +242,33 @@ export default function ScannerCaptureScreen() {
       />
 
       <View style={styles.guideLayer} pointerEvents="none">
-        <View style={styles.guideLabel} />
+        <LabelGuide width={guideWidth} />
       </View>
 
       <SafeAreaView style={styles.topOverlay} pointerEvents="box-none">
-        <Text style={styles.stepLabelOnDark}>Ler produto</Text>
-        <Text style={styles.instructionOnDark}>
+        <View style={styles.instructionPill}>
+          <Text variant="eyebrow" tone="onPrimary" style={styles.dim}>
+            Ler produto
+          </Text>
+          <Text variant="bodyLg" tone="onPrimary" style={styles.centerText}>
           Aponte para a lista de ingredientes do rótulo. Aproxime até o texto ficar nítido e legível.
-        </Text>
+          </Text>
+        </View>
       </SafeAreaView>
 
       <SafeAreaView style={styles.bottomOverlay} pointerEvents="box-none">
-        {uploadError && <Text style={styles.errorTextOnDark}>{uploadError}</Text>}
+        {uploadError && (
+          <Text variant="bodySm" style={styles.errorTextOnDark}>
+            {uploadError}
+          </Text>
+        )}
         <View style={styles.captureRow}>
           <Pressable accessibilityRole="button" onPress={handlePickFromGallery} style={styles.galleryBtn}>
-            <Text style={styles.galleryBtnLabel}>Galeria</Text>
+            <Text variant="caption" tone="onPrimary">
+              Galeria
+            </Text>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Capturar foto"
-            onPress={handleCapture}
-            disabled={!cameraReady || capturing}
-            style={[styles.shutterBtn, (!cameraReady || capturing) && styles.shutterBtnDisabled]}
-          >
-            {capturing ? <ActivityIndicator color={colors.text} /> : <View style={styles.shutterInner} />}
-          </Pressable>
+          <Shutter onPress={handleCapture} disabled={!cameraReady || capturing} busy={capturing} />
           <View style={styles.galleryBtn} />
         </View>
       </SafeAreaView>
@@ -172,41 +281,50 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   cameraRoot: { flex: 1, backgroundColor: '#000' },
 
-  permissionContent: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.lg },
-  subtitle: { fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21, color: colors.textMuted },
+  permissionContent: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.xxl },
+  stack: { gap: spacing.md },
 
   guideLayer: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  guideLabel: {
-    width: '78%',
-    height: 220,
+
+  topOverlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  instructionPill: {
+    alignSelf: 'center',
+    maxWidth: 340,
+    backgroundColor: colors.overlay,
     borderRadius: radii.lg,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.85)',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.xs,
   },
+  dim: { textAlign: 'center', opacity: 0.72 },
+  centerText: { textAlign: 'center' },
 
-  topOverlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.xs },
-  stepLabelOnDark: { fontFamily: fontFamily.bodySemiBold, fontSize: 12, color: '#FFFFFF' },
-  instructionOnDark: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: 'rgba(255,255,255,0.85)' },
-
-  bottomOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.md },
+  bottomOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
   captureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  shutterBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  shutterOuter: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
+    borderColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shutterBtnDisabled: { opacity: 0.5 },
-  shutterInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#FFFFFF' },
+  shutterDisabled: { opacity: 0.5 },
+  shutterInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#FFFFFF' },
   galleryBtn: { width: 64, alignItems: 'center' },
-  galleryBtnLabel: { fontFamily: fontFamily.bodyMedium, fontSize: 12, color: '#FFFFFF' },
 
-  reviewContent: { flex: 1, paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.md },
-  reviewImage: { flex: 1, borderRadius: radii.lg, backgroundColor: colors.surface },
-  reviewActions: { gap: spacing.sm },
-  errorText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.dangerText },
-  errorTextOnDark: { fontFamily: fontFamily.body, fontSize: 13, color: '#FFD9CC', textAlign: 'center' },
+  reviewContent: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl, gap: spacing.lg },
+  reviewImage: { flex: 1, borderRadius: radii.xl, backgroundColor: colors.surfaceSunken },
+  reviewActions: { flexDirection: 'row', gap: spacing.md },
+  actionBtn: { flex: 1 },
+  errorTextOnDark: { color: '#FFD9CC', textAlign: 'center' },
 });
