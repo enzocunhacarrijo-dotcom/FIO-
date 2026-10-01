@@ -40,11 +40,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   boxChecked: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   check: {
-    color: colors.bg,
+    color: colors.onPrimary,
     fontSize: 13,
     fontFamily: fontFamily.bodySemiBold,
   },

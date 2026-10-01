@@ -214,5 +214,5 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   habitQuestion: { fontFamily: fontFamily.bodySemiBold, fontSize: 13, color: colors.text, marginTop: spacing.xs },
-  error: { fontFamily: fontFamily.body, fontSize: 12, color: colors.clayText },
+  error: { fontFamily: fontFamily.body, fontSize: 12, color: colors.dangerText },
 });

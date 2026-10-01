@@ -49,8 +49,8 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   cardSelected: {
-    backgroundColor: colors.goldTint,
-    borderColor: colors.goldStrong,
+    backgroundColor: colors.primaryTint,
+    borderColor: colors.primary,
   },
   pressed: {
     opacity: 0.85,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderStrong,
   },
   radioSelected: {
-    borderColor: colors.goldStrong,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     width: 11,
     height: 11,
     borderRadius: radii.pill,
-    backgroundColor: colors.goldStrong,
+    backgroundColor: colors.primary,
   },
   checkbox: {
     width: 22,
@@ -98,11 +98,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxSelected: {
-    borderColor: colors.goldStrong,
-    backgroundColor: colors.goldStrong,
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   checkmark: {
-    color: colors.bg,
+    color: colors.onPrimary,
     fontSize: 13,
     fontFamily: fontFamily.bodySemiBold,
   },

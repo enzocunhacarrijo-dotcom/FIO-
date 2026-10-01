@@ -64,6 +64,43 @@ export default function ResultadoScreen() {
     );
   }
 
+  if (!result.qualidadeDasImagens.suficiente) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <ScreenHeader title="Seu perfil capilar" onBack={() => router.replace('/')} />
+
+          {result.sinalDeAlertaMedico && (
+            <View style={styles.alertCard}>
+              <Text style={styles.alertTitle}>Vale procurar um dermatologista</Text>
+              <Text style={styles.alertBody}>{result.motivoAlerta}</Text>
+            </View>
+          )}
+
+          <View style={styles.warnCard}>
+            <Text style={styles.warnTitle}>Não deu para analisar essas fotos</Text>
+            {result.qualidadeDasImagens.problemas.map((problema, i) => (
+              <Text key={i} style={styles.warnBody}>
+                • {problema}
+              </Text>
+            ))}
+            <Text style={[styles.warnBody, { marginTop: spacing.xs }]}>
+              Sem ver cabelo ou couro cabeludo com clareza nas três fotos, não é possível montar uma avaliação
+              confiável — por isso não mostramos números nem recomendações desta vez.
+            </Text>
+          </View>
+
+          <Button label="Tirar as fotos de novo" onPress={() => router.replace('/captura')} />
+
+          <Text style={styles.disclaimer}>
+            Esta é uma avaliação cosmética, não um diagnóstico médico. Para queda intensa, lesão ou dor no couro
+            cabeludo, procure um dermatologista.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -73,17 +110,6 @@ export default function ResultadoScreen() {
           <View style={styles.alertCard}>
             <Text style={styles.alertTitle}>Vale procurar um dermatologista</Text>
             <Text style={styles.alertBody}>{result.motivoAlerta}</Text>
-          </View>
-        )}
-
-        {!result.qualidadeDasImagens.suficiente && (
-          <View style={styles.warnCard}>
-            <Text style={styles.warnTitle}>As fotos limitaram a análise</Text>
-            {result.qualidadeDasImagens.problemas.map((problema, i) => (
-              <Text key={i} style={styles.warnBody}>
-                • {problema}
-              </Text>
-            ))}
           </View>
         )}
 
@@ -139,6 +165,17 @@ export default function ResultadoScreen() {
           <View style={styles.plainCard}>
             <Text style={styles.plainCardTitle}>Sinais de dano</Text>
             <Text style={styles.plainCardBody}>{result.sinaisDeDano.observacoes}</Text>
+          </View>
+        )}
+
+        {result.discrepancias.length > 0 && (
+          <View style={styles.warnCard}>
+            <Text style={styles.warnTitle}>Pontos de atenção</Text>
+            {result.discrepancias.map((d, i) => (
+              <Text key={i} style={styles.warnBody}>
+                • {d.observacao}
+              </Text>
+            ))}
           </View>
         )}
 
@@ -234,11 +271,11 @@ const styles = StyleSheet.create({
   error: {
     fontFamily: fontFamily.body,
     fontSize: 14,
-    color: colors.clayText,
+    color: colors.dangerText,
     textAlign: 'center',
   },
   alertCard: {
-    backgroundColor: colors.clayTint,
+    backgroundColor: colors.dangerTint,
     borderRadius: radii.lg,
     padding: spacing.lg,
     gap: 4,
@@ -246,16 +283,16 @@ const styles = StyleSheet.create({
   alertTitle: {
     fontFamily: fontFamily.bodySemiBold,
     fontSize: 15,
-    color: colors.clayText,
+    color: colors.dangerText,
   },
   alertBody: {
     fontFamily: fontFamily.body,
     fontSize: 13.5,
     lineHeight: 20,
-    color: colors.clayText,
+    color: colors.dangerText,
   },
   warnCard: {
-    backgroundColor: colors.goldTint,
+    backgroundColor: colors.accentTint,
     borderRadius: radii.lg,
     padding: spacing.lg,
     gap: 4,
@@ -263,13 +300,13 @@ const styles = StyleSheet.create({
   warnTitle: {
     fontFamily: fontFamily.bodySemiBold,
     fontSize: 14,
-    color: colors.goldStrong,
+    color: colors.accentStrong,
   },
   warnBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
     lineHeight: 19,
-    color: colors.goldStrong,
+    color: colors.accentStrong,
   },
   heroCard: {
     backgroundColor: colors.surface,

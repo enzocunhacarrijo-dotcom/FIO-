@@ -93,7 +93,7 @@ export default function ComparadorScreen() {
         {!loading && photos.length >= 2 && before && after && beforeUri && afterUri && (
           <>
             <View style={styles.compareContainer} onLayout={handleLayout} {...panResponder.panHandlers}>
-              <Image source={{ uri: afterUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+              <Image source={{ uri: afterUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
               <View style={[styles.clip, { width: sliderX }]}>
                 <Image
                   source={{ uri: beforeUri }}

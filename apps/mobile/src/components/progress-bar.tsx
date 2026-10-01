@@ -17,15 +17,15 @@ export function ProgressBar({ current, total }: { current: number; total: number
 
 const styles = StyleSheet.create({
   track: {
-    height: 4,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 6,
     backgroundColor: colors.border,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    backgroundColor: colors.gold,
-    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderRadius: 6,
   },
   label: {
     marginTop: 8,

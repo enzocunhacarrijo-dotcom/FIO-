@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AuthResponse, CurrentUser, ObjetivoPrincipal } from '@hair-analysis/shared';
+import type { AuthResponse, CurrentUser } from '@hair-analysis/shared';
 import * as authApi from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { deleteItem, getItem, setItem } from '@/lib/secure-storage';
@@ -54,7 +54,6 @@ type AuthState = {
   registerAccount: (email: string, password: string) => Promise<boolean>;
   loginAccount: (email: string, password: string) => Promise<boolean>;
   continueAsGuest: () => Promise<boolean>;
-  setObjetivo: (objetivo: ObjetivoPrincipal) => Promise<boolean>;
   setPremium: (isPremium: boolean) => Promise<boolean>;
   refresh: () => Promise<boolean>;
   logout: () => Promise<void>;
@@ -126,23 +125,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return true;
     } catch (err) {
       set({ error: err instanceof ApiError ? err.message : 'Não foi possível continuar sem conta.', busy: false });
-      return false;
-    }
-  },
-
-  setObjetivo: async (objetivo) => {
-    const { accessToken } = get();
-    if (!accessToken) {
-      set({ error: 'Sessão inválida. Entre novamente.' });
-      return false;
-    }
-    set({ busy: true, error: null });
-    try {
-      const user = await authApi.setObjetivoPrincipal(accessToken, objetivo);
-      set({ user, busy: false });
-      return true;
-    } catch (err) {
-      set({ error: err instanceof ApiError ? err.message : 'Não foi possível salvar seu objetivo.', busy: false });
       return false;
     }
   },

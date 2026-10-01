@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.accent,
   },
   barValue: {
     fontFamily: fontFamily.bodySemiBold,

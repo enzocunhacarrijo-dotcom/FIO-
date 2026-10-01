@@ -1,17 +1,30 @@
 import { create } from 'zustand';
-import { questionnaireResponseSchema, type ObjetivoPrincipal, type QuestionnaireResponse } from '@hair-analysis/shared';
-import { getOrderedQuestions, QUESTIONS, type Question } from '@/data/questions';
+import { questionnaireResponseSchema, type QuestionnaireResponse } from '@hair-analysis/shared';
+import { applyDerivedDefaults, QUESTIONS, type Question } from '@/data/questions';
 
-const initialAnswers: Partial<QuestionnaireResponse> = {
-  usoCalor: [],
-  historicoQuimica: [],
-  exposicaoAgua: [],
-  objetivos: [],
-  restricoes: [],
-  produtosAtuais: '',
-  frequenciaCalor: null,
+// Campos condicionais recebem um default explícito (null para respostas
+// únicas, [] para múltiplas) porque o schema de envio exige a chave presente
+// mesmo quando a pergunta correspondente nunca chega a ser exibida — nesse
+// caso, o valor default é a resposta correta ("não se aplica").
+export const initialAnswers: Partial<QuestionnaireResponse> = {
+  duracaoSintomasCouroCabeludo: null,
+  tipoQueda: null,
+  inicioQueda: null,
+  padraoQueda: null,
+  areasFalhadas: null,
+  eventosRecentesRelevantes: [],
+  frequenciaQuimica: null,
   tempoUltimaQuimica: null,
-  genero: null,
+  ferramentasCalor: [],
+  protetorTermico: null,
+  temperaturaCalorPercebida: null,
+  limpezaProfundaOcasional: null,
+  prendeCabeloFrequencia: null,
+  penteadosApertados: [],
+  dificuldadeDesembaraco: null,
+  recuoEntradasTopo: null,
+  historicoFamiliarQueda: null,
+  cortaControlarRarefacao: null,
 };
 
 function visibleIndices(questions: Question[], answers: Partial<QuestionnaireResponse>): number[] {
@@ -25,7 +38,7 @@ type QuestionnaireState = {
   questions: Question[];
   answers: Partial<QuestionnaireResponse>;
   stepIndex: number;
-  start: (objetivo: ObjetivoPrincipal | null) => void;
+  start: () => void;
   setAnswer: <K extends keyof QuestionnaireResponse>(id: K, value: QuestionnaireResponse[K]) => void;
   canAdvance: () => boolean;
   isLast: () => boolean;
@@ -41,11 +54,10 @@ export const useQuestionnaireStore = create<QuestionnaireState>((set, get) => ({
   answers: { ...initialAnswers },
   stepIndex: 0,
 
-  start: (objetivo) =>
+  start: () =>
     set((s) => {
-      const questions = getOrderedQuestions(objetivo);
-      const stillValidIndex = s.stepIndex < questions.length ? s.stepIndex : 0;
-      return { questions, stepIndex: stillValidIndex };
+      const stillValidIndex = s.stepIndex < s.questions.length ? s.stepIndex : 0;
+      return { stepIndex: stillValidIndex };
     }),
 
   setAnswer: (id, value) => set((s) => ({ answers: { ...s.answers, [id]: value } })),
@@ -55,9 +67,8 @@ export const useQuestionnaireStore = create<QuestionnaireState>((set, get) => ({
     const q = questions[stepIndex];
     if (!q) return false;
     if (q.kind === 'single') {
-      if (q.id === 'genero') return true;
       const value = answers[q.id];
-      return value !== undefined && value !== null && value !== '';
+      return value !== undefined && value !== null;
     }
     if (q.kind === 'multi') {
       const arr = (answers[q.id] as string[] | undefined) ?? [];
@@ -95,7 +106,7 @@ export const useQuestionnaireStore = create<QuestionnaireState>((set, get) => ({
   },
 
   getValidatedResponse: () => {
-    const parsed = questionnaireResponseSchema.safeParse(get().answers);
+    const parsed = questionnaireResponseSchema.safeParse(applyDerivedDefaults(get().answers));
     return parsed.success ? parsed.data : null;
   },
 

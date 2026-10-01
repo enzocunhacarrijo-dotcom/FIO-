@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import { scanResultSchema, type ScanResult } from '@hair-analysis/shared';
 import { ApiError } from './client';
 
@@ -10,12 +9,14 @@ function getBaseUrl(): string {
 
 export async function scanProduct(accessToken: string, photo: { uri: string }): Promise<ScanResult> {
   const form = new FormData();
-  if (Platform.OS === 'web') {
-    const blob = await (await fetch(photo.uri)).blob();
-    form.append('file', blob, 'label.jpg');
-  } else {
-    form.append('file', { uri: photo.uri, name: 'label.jpg', type: 'image/jpeg' } as unknown as Blob);
-  }
+  // Expo's SDK 57+ global `fetch` follows the WinterCG/web spec: FormData file
+  // parts must be a real Blob, not React Native's legacy { uri, name, type }
+  // shorthand (that shape now throws "Unsupported FormDataPart implementation").
+  // Fetching a local file:// URI doesn't reliably set Blob.type, so we force
+  // it explicitly — the capture screen always saves this photo as JPEG.
+  const rawBlob = await (await fetch(photo.uri)).blob();
+  const blob = rawBlob.type === 'image/jpeg' ? rawBlob : new Blob([rawBlob], { type: 'image/jpeg' });
+  form.append('file', blob, 'label.jpg');
 
   let response: Response;
   try {

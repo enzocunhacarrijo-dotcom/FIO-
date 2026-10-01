@@ -103,5 +103,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.md,
   },
-  logoutLabel: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.clayText },
+  logoutLabel: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.dangerText },
 });

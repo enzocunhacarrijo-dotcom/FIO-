@@ -26,7 +26,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.bg : colors.text} />
+        <ActivityIndicator color={isPrimary ? colors.onPrimary : colors.primary} />
       ) : (
         <Text style={[styles.label, isPrimary ? styles.labelPrimary : styles.labelSecondary]}>{label}</Text>
       )}
@@ -43,12 +43,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   primary: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
   },
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.primary,
   },
   disabled: {
     opacity: 0.5,
@@ -61,9 +61,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   labelPrimary: {
-    color: colors.bg,
+    color: colors.onPrimary,
   },
   labelSecondary: {
-    color: colors.text,
+    color: colors.primaryStrong,
   },
 });

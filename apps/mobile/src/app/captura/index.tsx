@@ -2,9 +2,10 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@/components/button';
+import { CaptureGuide } from '@/components/capture-guide';
 import { CAPTURE_STEPS } from '@/data/capture-steps';
 import { validateCaptureUri, type CaptureValidation } from '@/lib/capture-validation';
 import { prepareForUpload } from '@/lib/image-prep';
@@ -21,6 +22,7 @@ export default function CapturaScreen() {
   const cameraRef = useRef<CameraView>(null);
 
   const [stepIndex, setStepIndex] = useState(0);
+  const [facing, setFacing] = useState<CameraType>('back');
   const [cameraReady, setCameraReady] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [review, setReview] = useState<ReviewState>(null);
@@ -46,6 +48,10 @@ export default function CapturaScreen() {
     } finally {
       setCapturing(false);
     }
+  }
+
+  function toggleFacing() {
+    setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }
 
   async function handlePickFromGallery() {
@@ -78,7 +84,9 @@ export default function CapturaScreen() {
         router.replace('/analise');
       }
     } catch (err) {
-      setUploadError(err instanceof ApiError ? err.message : 'Não foi possível enviar a foto.');
+      console.error('[captura] falha ao preparar/enviar foto:', err);
+      const detail = err instanceof Error ? err.message : String(err);
+      setUploadError(err instanceof ApiError ? err.message : `Não foi possível enviar a foto. (${detail})`);
     } finally {
       setUploading(false);
     }
@@ -138,21 +146,21 @@ export default function CapturaScreen() {
       <CameraView
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
-        facing="back"
+        facing={facing}
+        mirror={facing === 'front'}
         onCameraReady={() => setCameraReady(true)}
       />
 
-      <View style={styles.guideLayer} pointerEvents="none">
-        {step.guideShape === 'portrait' && <View style={styles.guidePortrait} />}
-        {step.guideShape === 'circle' && <View style={styles.guideCircle} />}
-        {step.guideShape === 'closeup' && <View style={styles.guideCloseup} />}
-      </View>
+      <CaptureGuide shape={step.guideShape} caption={step.guideCaption} />
 
       <SafeAreaView style={styles.topOverlay} pointerEvents="box-none">
-        <Text style={styles.stepLabelOnDark}>
-          Foto {stepIndex + 1} de {CAPTURE_STEPS.length} — {step.title}
-        </Text>
-        <Text style={styles.instructionOnDark}>{step.instruction}</Text>
+        <View style={styles.instructionCard}>
+          <Text style={styles.stepLabelOnDark}>
+            Foto {stepIndex + 1} de {CAPTURE_STEPS.length}
+          </Text>
+          <Text style={styles.stepTitleOnDark}>{step.title}</Text>
+          <Text style={styles.instructionOnDark}>{step.instruction}</Text>
+        </View>
       </SafeAreaView>
 
       <SafeAreaView style={styles.bottomOverlay} pointerEvents="box-none">
@@ -170,7 +178,14 @@ export default function CapturaScreen() {
           >
             {capturing ? <ActivityIndicator color={colors.text} /> : <View style={styles.shutterInner} />}
           </Pressable>
-          <View style={styles.galleryBtn} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Trocar câmera"
+            onPress={toggleFacing}
+            style={styles.galleryBtn}
+          >
+            <Text style={styles.galleryBtnLabel}>{facing === 'back' ? 'Selfie' : 'Traseira'}</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     </View>
@@ -186,32 +201,38 @@ const styles = StyleSheet.create({
   title: { fontFamily: fontFamily.displaySemiBold, fontSize: 24, color: colors.text },
   subtitle: { fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21, color: colors.textMuted },
 
-  guideLayer: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  guidePortrait: {
-    width: '62%',
-    height: '68%',
-    borderRadius: 140,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.85)',
-  },
-  guideCircle: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.85)',
-  },
-  guideCloseup: {
-    width: 200,
-    height: 260,
+  topOverlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  instructionCard: {
+    alignSelf: 'center',
+    maxWidth: 340,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderRadius: radii.lg,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.85)',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: 4,
   },
-
-  topOverlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.xs },
-  stepLabelOnDark: { fontFamily: fontFamily.bodySemiBold, fontSize: 12, color: '#FFFFFF' },
-  instructionOnDark: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: 'rgba(255,255,255,0.85)' },
+  stepLabelOnDark: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.7)',
+  },
+  stepTitleOnDark: {
+    fontFamily: fontFamily.displayBold,
+    fontSize: 22,
+    lineHeight: 27,
+    textAlign: 'center',
+    color: '#FFFFFF',
+  },
+  instructionOnDark: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.92)',
+  },
 
   bottomOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.md },
   captureRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -233,6 +254,6 @@ const styles = StyleSheet.create({
   reviewContent: { flex: 1, paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.md },
   reviewImage: { flex: 1, borderRadius: radii.lg, backgroundColor: colors.surface },
   reviewActions: { gap: spacing.sm },
-  errorText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.clayText },
+  errorText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.dangerText },
   errorTextOnDark: { fontFamily: fontFamily.body, fontSize: 13, color: '#FFD9CC', textAlign: 'center' },
 });

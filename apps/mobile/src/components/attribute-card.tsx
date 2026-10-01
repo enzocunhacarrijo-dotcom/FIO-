@@ -12,9 +12,9 @@ type AttributeCardProps = {
 };
 
 const CONFIANCA_STYLE: Record<Confianca, { bg: string; fg: string }> = {
-  alta: { bg: colors.tealTint, fg: colors.teal },
+  alta: { bg: colors.primaryTint, fg: colors.primaryStrong },
   media: { bg: colors.border, fg: colors.textMuted },
-  baixa: { bg: colors.clayTint, fg: colors.clayText },
+  baixa: { bg: colors.dangerTint, fg: colors.dangerText },
 };
 
 export function AttributeCard({ title, value, description, fonte, confianca }: AttributeCardProps) {

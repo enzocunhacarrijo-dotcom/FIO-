@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import { photoRecordSchema, type PhotoKind, type PhotoRecord } from '@hair-analysis/shared';
 import { ApiError } from './client';
 
@@ -18,18 +17,14 @@ export async function uploadPhoto(
   form.append('width', String(Math.round(photo.width)));
   form.append('height', String(Math.round(photo.height)));
 
-  // React Native's fetch understands the { uri, name, type } file descriptor
-  // natively, but react-native-web's FormData does not — it needs a real Blob.
-  if (Platform.OS === 'web') {
-    const blob = await (await fetch(photo.uri)).blob();
-    form.append('file', blob, `${kind}.jpg`);
-  } else {
-    form.append('file', {
-      uri: photo.uri,
-      name: `${kind}.jpg`,
-      type: 'image/jpeg',
-    } as unknown as Blob);
-  }
+  // Expo's SDK 57+ global `fetch` follows the WinterCG/web spec: FormData file
+  // parts must be a real Blob, not React Native's legacy { uri, name, type }
+  // shorthand (that shape now throws "Unsupported FormDataPart implementation").
+  // Fetching a local file:// URI doesn't reliably set Blob.type, so we force
+  // it explicitly — prepareForUpload always saves the photo as JPEG.
+  const rawBlob = await (await fetch(photo.uri)).blob();
+  const blob = rawBlob.type === 'image/jpeg' ? rawBlob : new Blob([rawBlob], { type: 'image/jpeg' });
+  form.append('file', blob, `${kind}.jpg`);
 
   let response: Response;
   try {
@@ -38,8 +33,9 @@ export async function uploadPhoto(
       headers: { Authorization: `Bearer ${accessToken}` },
       body: form,
     });
-  } catch {
-    throw new ApiError('Não foi possível enviar a foto. Verifique sua conexão.', 0, 'network_error');
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new ApiError(`Não foi possível enviar a foto. Verifique sua conexão. (${detail})`, 0, 'network_error');
   }
 
   const json = await response.json().catch(() => null);

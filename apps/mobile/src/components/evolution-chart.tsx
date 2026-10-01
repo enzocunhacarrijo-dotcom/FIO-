@@ -47,9 +47,9 @@ export function EvolutionChart({ items, width = 320 }: { items: AnalysisHistoryI
           stroke={colors.border}
           strokeWidth={1}
         />
-        {points.length > 1 && <Polyline points={polylinePoints} fill="none" stroke={colors.gold} strokeWidth={2.5} />}
+        {points.length > 1 && <Polyline points={polylinePoints} fill="none" stroke={colors.accent} strokeWidth={2.5} />}
         {points.map((p, i) => (
-          <Circle key={i} cx={p.x} cy={p.y} r={4.5} fill={colors.goldStrong} />
+          <Circle key={i} cx={p.x} cy={p.y} r={4.5} fill={colors.accentStrong} />
         ))}
       </Svg>
       <View style={styles.labelsRow}>

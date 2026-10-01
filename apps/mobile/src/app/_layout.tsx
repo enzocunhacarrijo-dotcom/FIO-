@@ -2,32 +2,25 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import {
-  useFonts as useNewsreaderFonts,
-  Newsreader_500Medium,
-  Newsreader_600SemiBold,
-  Newsreader_700Bold,
-} from '@expo-google-fonts/newsreader';
-import {
-  useFonts as usePlexSansFonts,
-  IBMPlexSans_400Regular,
-  IBMPlexSans_500Medium,
-  IBMPlexSans_600SemiBold,
-} from '@expo-google-fonts/ibm-plex-sans';
+  useFonts,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { colors } from '@/theme/tokens';
 import { useAuthStore } from '@/store/auth';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [newsreaderLoaded] = useNewsreaderFonts({
-    Newsreader_500Medium,
-    Newsreader_600SemiBold,
-    Newsreader_700Bold,
-  });
-  const [plexSansLoaded] = usePlexSansFonts({
-    IBMPlexSans_400Regular,
-    IBMPlexSans_500Medium,
-    IBMPlexSans_600SemiBold,
+  const [fontsReady] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
   });
 
   const authStatus = useAuthStore((s) => s.status);
@@ -40,7 +33,6 @@ export default function RootLayout() {
     hydrate();
   }, [hydrate]);
 
-  const fontsReady = newsreaderLoaded && plexSansLoaded;
   const ready = fontsReady && authStatus === 'ready';
 
   useEffect(() => {

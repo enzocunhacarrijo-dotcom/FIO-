@@ -10,7 +10,6 @@ import { colors } from '@/theme/tokens';
 
 type Destination =
   | '/welcome'
-  | '/onboarding/objetivo'
   | '/onboarding/questionario'
   | '/captura'
   | '/analise'
@@ -27,10 +26,6 @@ export default function Index() {
 
     if (!user) {
       setDestination('/welcome');
-      return;
-    }
-    if (!user.objetivoPrincipal) {
-      setDestination('/onboarding/objetivo');
       return;
     }
     if (!accessToken) {

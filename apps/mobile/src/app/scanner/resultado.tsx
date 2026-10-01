@@ -13,9 +13,9 @@ const VERDICT_LABEL: Record<Compatibilidade, string> = {
   evitar: 'Evitar',
 };
 const VERDICT_STYLE: Record<Compatibilidade, { bg: string; fg: string }> = {
-  compativel: { bg: colors.tealTint, fg: colors.teal },
+  compativel: { bg: colors.primaryTint, fg: colors.primaryStrong },
   neutro: { bg: colors.border, fg: colors.textMuted },
-  evitar: { bg: colors.clayTint, fg: colors.clayText },
+  evitar: { bg: colors.dangerTint, fg: colors.dangerText },
 };
 
 export default function ScannerResultadoScreen() {
@@ -101,13 +101,13 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   warnCard: {
-    backgroundColor: colors.goldTint,
+    backgroundColor: colors.accentTint,
     borderRadius: radii.lg,
     padding: spacing.lg,
     gap: 4,
   },
-  warnTitle: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.goldStrong },
-  warnBody: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: colors.goldStrong },
+  warnTitle: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.accentStrong },
+  warnBody: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: colors.accentStrong },
   heroCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,

@@ -23,11 +23,11 @@ const styles = StyleSheet.create({
   trigger: {
     fontFamily: fontFamily.bodySemiBold,
     fontSize: 12.5,
-    color: colors.teal,
+    color: colors.primaryStrong,
   },
   box: {
     marginTop: spacing.sm,
-    backgroundColor: colors.tealTint,
+    backgroundColor: colors.primaryTint,
     borderRadius: radii.sm,
     padding: spacing.md,
   },

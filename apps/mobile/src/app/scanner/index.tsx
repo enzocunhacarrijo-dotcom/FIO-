@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   permissionContent: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.lg },
   subtitle: { fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21, color: colors.textMuted },
 
-  guideLayer: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  guideLayer: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   guideLabel: {
     width: '78%',
     height: 220,
@@ -207,6 +207,6 @@ const styles = StyleSheet.create({
   reviewContent: { flex: 1, paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.md },
   reviewImage: { flex: 1, borderRadius: radii.lg, backgroundColor: colors.surface },
   reviewActions: { gap: spacing.sm },
-  errorText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.clayText },
+  errorText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.dangerText },
   errorTextOnDark: { fontFamily: fontFamily.body, fontSize: 13, color: '#FFD9CC', textAlign: 'center' },
 });

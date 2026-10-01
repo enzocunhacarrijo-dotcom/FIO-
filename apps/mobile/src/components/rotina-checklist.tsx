@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.text },
-  streak: { fontFamily: fontFamily.bodySemiBold, fontSize: 12, color: colors.goldStrong },
+  streak: { fontFamily: fontFamily.bodySemiBold, fontSize: 12, color: colors.accentStrong },
   empty: {
     fontFamily: fontFamily.body,
     fontSize: 13,

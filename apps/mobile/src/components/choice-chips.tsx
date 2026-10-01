@@ -40,8 +40,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   chipSelected: {
-    backgroundColor: colors.goldTint,
-    borderColor: colors.goldStrong,
+    backgroundColor: colors.primaryTint,
+    borderColor: colors.primary,
   },
   chipText: {
     fontFamily: fontFamily.bodyMedium,
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   chipTextSelected: {
-    color: colors.goldStrong,
+    color: colors.primaryStrong,
     fontFamily: fontFamily.bodySemiBold,
   },
 });

@@ -4,7 +4,6 @@ import {
   userDataExportSchema,
   type AuthResponse,
   type CurrentUser,
-  type ObjetivoPrincipal,
   type UserDataExport,
 } from '@hair-analysis/shared';
 import { request } from './client';
@@ -31,14 +30,6 @@ export function refresh(refreshToken: string): Promise<AuthResponse> {
   return request<AuthResponse>('/api/auth/refresh', { method: 'POST', body: { refreshToken } }).then((r) =>
     authResponseSchema.parse(r),
   );
-}
-
-export function setObjetivoPrincipal(accessToken: string, objetivoPrincipal: ObjetivoPrincipal): Promise<CurrentUser> {
-  return request<CurrentUser>('/api/me/objetivo', {
-    method: 'PATCH',
-    accessToken,
-    body: { objetivoPrincipal },
-  }).then((r) => currentUserSchema.parse(r));
 }
 
 export function setPremium(accessToken: string, isPremium: boolean): Promise<CurrentUser> {

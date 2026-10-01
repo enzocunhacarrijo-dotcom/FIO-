@@ -33,7 +33,7 @@ export default function RegisterScreen() {
     }
 
     const ok = await registerAccount(email.trim().toLowerCase(), password);
-    if (ok) router.replace('/onboarding/objetivo');
+    if (ok) router.replace('/onboarding/questionario');
   }
 
   return (
@@ -94,6 +94,6 @@ const styles = StyleSheet.create({
   error: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.clayText,
+    color: colors.dangerText,
   },
 });

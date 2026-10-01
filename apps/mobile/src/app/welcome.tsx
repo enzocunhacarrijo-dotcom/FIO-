@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Button } from '@/components/button';
 import { Checkbox } from '@/components/checkbox';
+import { Logo } from '@/components/logo';
 import { useAuthStore } from '@/store/auth';
 import { colors, fontFamily, spacing } from '@/theme/tokens';
 
@@ -19,17 +20,18 @@ export default function WelcomeScreen() {
     setGuestLoading(true);
     const ok = await continueAsGuest();
     setGuestLoading(false);
-    if (ok) router.replace('/onboarding/objetivo');
+    if (ok) router.replace('/onboarding/questionario');
   }
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.hero}>
-          <Text style={styles.title}>Análise capilar, sem achismo</Text>
+          <Logo size={52} />
+          <Text style={styles.title}>Entenda seu cabelo de verdade</Text>
           <Text style={styles.subtitle}>
-            Uma foto guiada, um questionário curto, e um perfil capilar estruturado — pra qualidade do fio ou pra
-            densidade e queda, sem distinção de interface.
+            Fotos guiadas, um questionário curto e um perfil capilar claro e personalizado — para qualquer tipo de
+            cabelo, de qualquer pessoa.
           </Text>
         </View>
 
@@ -78,12 +80,13 @@ const styles = StyleSheet.create({
   },
   hero: {
     marginTop: spacing.xxl * 2,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   title: {
     fontFamily: fontFamily.displaySemiBold,
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.5,
     color: colors.text,
   },
   subtitle: {
@@ -98,7 +101,7 @@ const styles = StyleSheet.create({
   error: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.clayText,
+    color: colors.dangerText,
   },
   disclaimer: {
     fontFamily: fontFamily.body,

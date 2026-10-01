@@ -9,7 +9,7 @@ import { OptionCard } from '@/components/option-card';
 import { ProgressBar } from '@/components/progress-bar';
 import { ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
-import { toggleMultiValue } from '@/data/questions';
+import { resolveOptions, toggleMultiValue } from '@/data/questions';
 import { submitQuestionnaire } from '@/api/questionnaire';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/store/auth';
@@ -18,7 +18,6 @@ import { colors, fontFamily, spacing } from '@/theme/tokens';
 
 export default function QuestionarioScreen() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const objetivoPrincipal = useAuthStore((s) => s.user?.objetivoPrincipal ?? null);
   const start = useQuestionnaireStore((s) => s.start);
   const questions = useQuestionnaireStore((s) => s.questions);
   const answers = useQuestionnaireStore((s) => s.answers);
@@ -34,15 +33,14 @@ export default function QuestionarioScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Reordena as perguntas pelo objetivo escolhido (sem pular nenhuma) assim
-  // que a tela monta, pra sentir mais direcionado sem segmentar por gênero.
   useEffect(() => {
-    start(objetivoPrincipal);
+    start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const question = questions[stepIndex];
   if (!question) return null;
+  const options = resolveOptions(question, answers);
 
   async function handleContinue() {
     if (!isLast) {
@@ -84,7 +82,7 @@ export default function QuestionarioScreen() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <View style={styles.topBar}>
-          <ScreenHeader title="Sobre o seu cabelo" onBack={handleBack} />
+          <ScreenHeader title="Sobre você e seu cabelo" onBack={handleBack} />
           <ProgressBar current={current} total={total} />
         </View>
 
@@ -97,7 +95,7 @@ export default function QuestionarioScreen() {
 
           {question.kind === 'single' && (
             <View style={styles.options}>
-              {question.options.map((opt) => (
+              {options.map((opt) => (
                 <OptionCard
                   key={opt.value}
                   label={opt.label}
@@ -111,7 +109,7 @@ export default function QuestionarioScreen() {
 
           {question.kind === 'multi' && (
             <View style={styles.options}>
-              {question.options.map((opt) => {
+              {options.map((opt) => {
                 const currentValues = (answers[question.id] as string[] | undefined) ?? [];
                 return (
                   <OptionCard
@@ -120,7 +118,7 @@ export default function QuestionarioScreen() {
                     mode="multi"
                     selected={currentValues.includes(opt.value)}
                     onPress={() =>
-                      setAnswer(question.id, toggleMultiValue(currentValues, question.options, opt.value) as never)
+                      setAnswer(question.id, toggleMultiValue(currentValues, options, opt.value) as never)
                     }
                   />
                 );
@@ -200,6 +198,6 @@ const styles = StyleSheet.create({
   error: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.clayText,
+    color: colors.dangerText,
   },
 });

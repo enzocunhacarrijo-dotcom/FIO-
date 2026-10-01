@@ -82,7 +82,7 @@ export default function PrivacidadeScreen() {
           ) : (
             <View style={styles.confirmRow}>
               {deleting ? (
-                <ActivityIndicator color={colors.clayText} />
+                <ActivityIndicator color={colors.dangerText} />
               ) : (
                 <>
                   <Button label="Cancelar" variant="secondary" onPress={() => setConfirmingDelete(false)} style={styles.confirmBtn} />
@@ -109,11 +109,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   dangerCard: {
-    borderColor: colors.clayTint,
+    borderColor: colors.dangerTint,
   },
   cardTitle: { fontFamily: fontFamily.bodySemiBold, fontSize: 14, color: colors.text },
   body: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: colors.textMuted },
-  error: { fontFamily: fontFamily.body, fontSize: 12, color: colors.clayText },
+  error: { fontFamily: fontFamily.body, fontSize: 12, color: colors.dangerText },
   confirmRow: { flexDirection: 'row', gap: spacing.sm },
   confirmBtn: { flex: 1 },
 });
